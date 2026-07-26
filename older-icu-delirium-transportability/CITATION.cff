@@ -1,0 +1,28 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite the accompanying article and this software release."
+title: "Older ICU Delirium Transportability"
+type: software
+version: 1.0.0
+date-released: 2026-07-27
+license: MIT
+authors:
+  - family-names: Ren
+    given-names: Jingzhuo
+  - family-names: Zhang
+    given-names: Qiannan
+  - family-names: Liu
+    given-names: Lixin
+  - family-names: Xue
+    given-names: Zhaoping
+abstract: >-
+  Reproducible SQL, Python, R, and PowerShell code for development in MIMIC-IV
+  and external evaluation in eICU-CRD of an interpretable first-24-hour model
+  for late or persistent delirium in older intensive care patients.
+keywords:
+  - delirium
+  - intensive care
+  - machine learning
+  - external validation
+  - transportability
+  - MIMIC-IV
+  - eICU-CRD
