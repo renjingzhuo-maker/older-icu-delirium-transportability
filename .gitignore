@@ -1,0 +1,74 @@
+# Credentials and local configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.pfx
+*.pgpass
+credentials/
+secrets/
+
+# Restricted source and derived data
+data/*
+!data/README.md
+results/*
+!results/README.md
+*.csv
+*.csv.gz
+*.tsv
+*.parquet
+*.feather
+*.arrow
+*.dta
+*.sav
+*.sas7bdat
+*.db
+*.sqlite
+*.sqlite3
+*.dump
+*.backup
+
+# Fitted models and patient-level analytical objects
+*.joblib
+*.pkl
+*.pickle
+*.rds
+*.RData
+*.Rhistory
+
+# Database source files and archives
+*.gz
+*.zip
+*.7z
+*.tar
+*.tgz
+
+# Generated manuscript files and render artifacts
+manuscript/assets/
+manuscript/rendered*/
+manuscript/*.docx
+manuscript/*.pdf
+
+# Logs, caches, and environments
+*.log
+*.err
+*.out
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+env/
+.Rproj.user/
+
+# Operating-system and editor files
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+*.swp
+*~
