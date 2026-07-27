@@ -244,7 +244,7 @@ This research received no specific grant from any funding agency in the public, 
 
 ### Competing Interests
 
-[Insert competing-interest declarations for all authors.]
+The authors declare no competing interests.
 
 ### Author Contributions
 
