@@ -10,6 +10,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import shap
+from scipy.optimize import brentq
+from scipy.special import expit
 from sklearn.base import clone
 from sklearn.compose import ColumnTransformer
 from sklearn.impute import SimpleImputer
@@ -32,6 +34,7 @@ from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from xgboost import XGBClassifier
 
 SEED = 20260726
+TUNING_N_ITER = 20
 
 ID_COLUMNS = {
     "subject_id", "hadm_id", "stay_id", "patientunitstayid",
@@ -47,6 +50,7 @@ LEAKAGE_COLUMNS = {
     "trajectory_loose_eligible", "valid_outcome_days",
     "delirium_positive_days", "first_positive_day", "last_positive_day",
     "any_delirium_day2_5", "late_persistent_delirium",
+    "strict_two_positive_days", "any_post24_delirium",
     "valid_any_screen_days", "any_screen_delirium_day2_5",
     "trajectory_class", "high_risk_trajectory",
 }
@@ -75,6 +79,45 @@ NURSING_FEATURES = [
     "sedative_24h", "benzodiazepine_24h", "opioid_24h",
     "antipsychotic_24h", "restraint_24h", "transfusion_24h",
 ]
+
+FEATURE_LABELS = {
+    "age": "Age",
+    "sex": "Sex",
+    "race": "Race",
+    "icu_type": "ICU type",
+    "admission_type": "Admission type",
+    "psychiatric_disorder": "Psychiatric disorder",
+    "mechvent_24h": "Mechanical ventilation",
+    "gcs_min": "Minimum GCS",
+    "rass_min": "Minimum RASS",
+    "rass_max": "Maximum RASS",
+    "temperature_min": "Minimum temperature",
+    "temperature_max": "Maximum temperature",
+    "spo2_min": "Minimum SpO2",
+    "bun_max": "Maximum BUN",
+    "creatinine_max": "Maximum creatinine",
+    "glucose_lab_max": "Maximum glucose",
+    "lactate_max": "Maximum lactate",
+    "sedative_24h": "Sedative exposure",
+    "benzodiazepine_24h": "Benzodiazepine exposure",
+    "opioid_24h": "Opioid exposure",
+    "antipsychotic_24h": "Antipsychotic exposure",
+    "transfusion_24h": "Transfusion exposure",
+}
+
+
+def display_feature_name(name: str, raw_features: list[str]) -> str:
+    for raw in sorted(raw_features, key=len, reverse=True):
+        if name == raw:
+            return FEATURE_LABELS.get(raw, raw.replace("_", " ").title())
+        prefix = f"{raw}_"
+        if name.startswith(prefix):
+            suffix = name[len(prefix):].replace("_", " ")
+            base = FEATURE_LABELS.get(raw, raw.replace("_", " ").title())
+            if suffix == "missingindicator":
+                return f"{base} missing"
+            return f"{base}: {suffix}"
+    return name.replace("_", " ").title()
 
 
 def normalize_columns(df: pd.DataFrame, source: str) -> pd.DataFrame:
@@ -270,7 +313,12 @@ def bootstrap_metrics(
     rng = np.random.default_rng(SEED)
     y = np.asarray(y)
     p = np.asarray(p)
-    values: dict[str, list[float]] = {"auroc": [], "auprc": [], "brier": []}
+    metric_names = [
+        "auroc", "auprc", "brier", "log_loss",
+        "calibration_intercept", "calibration_slope", "ece_10",
+        "sensitivity", "specificity", "ppv", "npv",
+    ]
+    values: dict[str, list[float]] = {name: [] for name in metric_names}
     if clusters is not None:
         clusters = np.asarray(clusters)
         unique_clusters = np.unique(clusters)
@@ -278,17 +326,35 @@ def bootstrap_metrics(
         if clusters is None:
             idx = rng.integers(0, len(y), len(y))
         else:
-            sampled = rng.choice(unique_clusters, size=len(unique_clusters), replace=True)
-            idx = np.concatenate([np.flatnonzero(clusters == cluster) for cluster in sampled])
+            sampled = rng.choice(
+                unique_clusters, size=len(unique_clusters), replace=True
+            )
+            sampled_rows = []
+            for cluster in sampled:
+                cluster_rows = np.flatnonzero(clusters == cluster)
+                sampled_rows.append(
+                    rng.choice(
+                        cluster_rows,
+                        size=len(cluster_rows),
+                        replace=True,
+                    )
+                )
+            idx = np.concatenate(sampled_rows)
         if np.unique(y[idx]).size < 2:
             continue
-        values["auroc"].append(roc_auc_score(y[idx], p[idx]))
-        values["auprc"].append(average_precision_score(y[idx], p[idx]))
-        values["brier"].append(brier_score_loss(y[idx], p[idx]))
+        row = metric_row(y[idx], p[idx], threshold, "bootstrap")
+        for name in metric_names:
+            value = row[name]
+            if np.isfinite(value):
+                values[name].append(value)
     result = {}
     for name, vals in values.items():
-        result[f"{name}_ci_low"] = float(np.quantile(vals, 0.025))
-        result[f"{name}_ci_high"] = float(np.quantile(vals, 0.975))
+        result[f"{name}_ci_low"] = (
+            float(np.quantile(vals, 0.025)) if vals else math.nan
+        )
+        result[f"{name}_ci_high"] = (
+            float(np.quantile(vals, 0.975)) if vals else math.nan
+        )
     return result
 
 
@@ -315,10 +381,17 @@ def paired_auc_difference(
             sampled = rng.choice(
                 unique_clusters, size=len(unique_clusters), replace=True
             )
-            idx = np.concatenate([
-                np.flatnonzero(clusters == cluster)
-                for cluster in sampled
-            ])
+            sampled_rows = []
+            for cluster in sampled:
+                cluster_rows = np.flatnonzero(clusters == cluster)
+                sampled_rows.append(
+                    rng.choice(
+                        cluster_rows,
+                        size=len(cluster_rows),
+                        replace=True,
+                    )
+                )
+            idx = np.concatenate(sampled_rows)
         if np.unique(y[idx]).size < 2:
             continue
         differences.append(
@@ -363,6 +436,94 @@ def decision_curve(y: np.ndarray, p: np.ndarray, label: str) -> pd.DataFrame:
             "treat_none_net_benefit": 0.0,
         })
     return pd.DataFrame(rows)
+
+
+def hospital_clusters(eicu: pd.DataFrame) -> np.ndarray:
+    if "hospitalid" not in eicu:
+        raise KeyError("eICU hospitalid is required for external resampling.")
+    return (
+        eicu["hospitalid"]
+        .fillna(-1)
+        .astype(int)
+        .astype(str)
+        .to_numpy()
+    )
+
+
+def calibration_bins(
+    y: np.ndarray,
+    p: np.ndarray,
+    dataset: str,
+    bins: int = 10,
+) -> pd.DataFrame:
+    frame = pd.DataFrame({
+        "observed": np.asarray(y, dtype=int),
+        "predicted": np.asarray(p, dtype=float),
+    })
+    frame["bin"] = pd.qcut(
+        frame["predicted"],
+        q=min(bins, frame["predicted"].nunique()),
+        duplicates="drop",
+    )
+    return (
+        frame.groupby("bin", observed=True)
+        .agg(
+            n=("observed", "size"),
+            events=("observed", "sum"),
+            mean_predicted=("predicted", "mean"),
+            observed_rate=("observed", "mean"),
+        )
+        .reset_index(drop=True)
+        .assign(dataset=dataset)
+    )
+
+
+def recalibration_diagnostics(
+    y: np.ndarray,
+    p: np.ndarray,
+    dataset: str,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    y = np.asarray(y, dtype=int)
+    p = np.clip(np.asarray(p, dtype=float), 1e-6, 1 - 1e-6)
+    logit = np.log(p / (1 - p))
+    intercept = brentq(
+        lambda alpha: float(np.mean(expit(logit + alpha)) - y.mean()),
+        -20,
+        20,
+    )
+    full_model = LogisticRegression(C=1e12, solver="lbfgs", max_iter=1000)
+    full_model.fit(logit.reshape(-1, 1), y)
+    variants = {
+        "original": p,
+        "intercept_only": expit(logit + intercept),
+        "intercept_and_slope": full_model.predict_proba(
+            logit.reshape(-1, 1)
+        )[:, 1],
+    }
+    rows = []
+    predictions = []
+    for method, probability in variants.items():
+        row = metric_row(y, probability, 0.5, f"{dataset} - {method}")
+        row["recalibration_method"] = method
+        row["fitted_intercept_adjustment"] = (
+            intercept if method == "intercept_only"
+            else (
+                float(full_model.intercept_[0])
+                if method == "intercept_and_slope" else 0.0
+            )
+        )
+        row["fitted_slope_adjustment"] = (
+            float(full_model.coef_[0, 0])
+            if method == "intercept_and_slope" else 1.0
+        )
+        rows.append(row)
+        predictions.append(pd.DataFrame({
+            "dataset": dataset,
+            "recalibration_method": method,
+            "target": y,
+            "predicted_probability": probability,
+        }))
+    return pd.DataFrame(rows), pd.concat(predictions, ignore_index=True)
 
 
 def fit_binary_model(
@@ -414,7 +575,7 @@ def fit_binary_model(
         fold_search = RandomizedSearchCV(
             clone(pipeline),
             param_distributions=parameter_space,
-            n_iter=8,
+            n_iter=TUNING_N_ITER,
             scoring="roc_auc",
             cv=inner_cv,
             random_state=SEED + fold,
@@ -440,7 +601,7 @@ def fit_binary_model(
     final_search = RandomizedSearchCV(
         clone(pipeline),
         param_distributions=parameter_space,
-        n_iter=20,
+        n_iter=TUNING_N_ITER,
         scoring="roc_auc",
         cv=outer_cv,
         random_state=SEED,
@@ -459,11 +620,7 @@ def fit_binary_model(
     external_row = metric_row(
         y_external, external_p, threshold, f"eICU external - {model_name}"
     )
-    external_clusters = None
-    if "uniquepid" in eicu:
-        external_clusters = eicu["uniquepid"].fillna(
-            eicu["patientunitstayid"].astype(str)
-        ).to_numpy()
+    external_clusters = hospital_clusters(eicu)
     external_row.update(bootstrap_metrics(
         y_external, external_p, threshold, clusters=external_clusters
     ))
@@ -479,6 +636,52 @@ def fit_binary_model(
     with open(result_dir / f"{model_name}_best_parameters.json", "w", encoding="utf-8") as f:
         json.dump(final_search.best_params_, f, indent=2)
     joblib.dump(best, result_dir / f"{model_name}.joblib")
+
+    pd.concat([
+        pd.DataFrame({
+            "model": model_name,
+            "dataset": "MIMIC internal OOF",
+            "row_id": mimic["stay_id"].astype(str).to_numpy(),
+            "hospitalid": np.nan,
+            "target": y,
+            "predicted_probability": oof,
+        }),
+        pd.DataFrame({
+            "model": model_name,
+            "dataset": "eICU external",
+            "row_id": eicu["patientunitstayid"].astype(str).to_numpy(),
+            "hospitalid": eicu["hospitalid"].to_numpy(),
+            "target": y_external,
+            "predicted_probability": external_p,
+        }),
+    ], ignore_index=True).to_csv(
+        result_dir / f"{model_name}_predictions.csv",
+        index=False,
+    )
+
+    calibration = pd.concat([
+        calibration_bins(y, oof, "MIMIC internal OOF"),
+        calibration_bins(y_external, external_p, "eICU external"),
+    ], ignore_index=True)
+    calibration.to_csv(
+        result_dir / f"{model_name}_calibration_bins.csv",
+        index=False,
+    )
+    recalibration_metrics, recalibration_predictions = (
+        recalibration_diagnostics(
+            y_external,
+            external_p,
+            "eICU external apparent recalibration diagnostic",
+        )
+    )
+    recalibration_metrics.to_csv(
+        result_dir / f"{model_name}_recalibration_diagnostics.csv",
+        index=False,
+    )
+    recalibration_predictions.to_csv(
+        result_dir / f"{model_name}_recalibration_predictions.csv",
+        index=False,
+    )
 
     dca = pd.concat([
         decision_curve(y, oof, f"MIMIC internal OOF - {model_name}"),
@@ -504,9 +707,7 @@ def run_coding_harmonization_sensitivity(
         eicu[nursing_features]
     )[:, 1]
     y_external = eicu["late_persistent_delirium"].astype(int).to_numpy()
-    external_clusters = eicu["uniquepid"].fillna(
-        eicu["patientunitstayid"].astype(str)
-    ).to_numpy()
+    external_clusters = hospital_clusters(eicu)
 
     variants = [
         (
@@ -514,6 +715,7 @@ def run_coding_harmonization_sensitivity(
             "nursing_without_psychiatric_disorder_harmonized",
         ),
         ("icu_type", "nursing_without_icu_type_harmonized"),
+        ("race", "nursing_without_race_harmonized"),
     ]
     metric_frames = []
     paired_rows = []
@@ -585,6 +787,10 @@ def shap_outputs(
     feature_names = model.named_steps["preprocess"].get_feature_names_out()
     explainer = shap.TreeExplainer(model.named_steps["model"])
     values = explainer.shap_values(transformed)
+    display_names = [
+        display_feature_name(name, features)
+        for name in feature_names
+    ]
     if hasattr(transformed, "toarray"):
         transformed_plot = transformed.toarray()
     else:
@@ -598,7 +804,7 @@ def shap_outputs(
         result_dir / f"{model_name}_shap_importance.csv", index=False
     )
     shap.summary_plot(
-        values, transformed_plot, feature_names=feature_names,
+        values, transformed_plot, feature_names=display_names,
         max_display=20, show=False,
     )
     plt.tight_layout()
@@ -651,10 +857,26 @@ def fit_bedside_score(
     score.fit(x, y)
     external_p = score.predict_proba(eicu[numeric_binary])[:, 1]
     y_external = eicu["late_persistent_delirium"].astype(int).to_numpy()
-    metrics = pd.DataFrame([
-        metric_row(y, oof, threshold, f"MIMIC internal OOF - {model_name}"),
-        metric_row(y_external, external_p, threshold, f"eICU external - {model_name}"),
-    ])
+    internal_row = metric_row(
+        y,
+        oof,
+        threshold,
+        f"MIMIC internal OOF - {model_name}",
+    )
+    internal_row.update(bootstrap_metrics(y, oof, threshold))
+    external_row = metric_row(
+        y_external,
+        external_p,
+        threshold,
+        f"eICU external - {model_name}",
+    )
+    external_row.update(bootstrap_metrics(
+        y_external,
+        external_p,
+        threshold,
+        clusters=hospital_clusters(eicu),
+    ))
+    metrics = pd.DataFrame([internal_row, external_row])
     metrics.to_csv(result_dir / f"{model_name}_performance.csv", index=False)
     joblib.dump(score, result_dir / f"{model_name}.joblib")
 
@@ -879,6 +1101,14 @@ def hospital_sensitivity(
     output = pd.DataFrame(rows).sort_values(
         ["n", "candidate_n"], ascending=False
     )
+    site_map = {
+        hospital: f"Site {index:03d}"
+        for index, hospital in enumerate(
+            sorted(output["hospitalid"].dropna().unique()),
+            start=1,
+        )
+    }
+    output["site_label"] = output["hospitalid"].map(site_map)
     output.to_csv(
         result_dir / f"{model_name}_eicu_hospital_transportability.csv",
         index=False,
@@ -902,7 +1132,7 @@ def hospital_sensitivity(
         ax.set_yticks(positions)
         ax.set_yticklabels(
             [
-                f"Hospital {int(row.hospitalid)} (n={int(row.n)})"
+                f"{row.site_label} (n={int(row.n)})"
                 for row in forest.itertuples()
             ]
         )
@@ -1125,9 +1355,7 @@ def main(study_dir: Path, stage: str = "all") -> None:
                 clinical_external_p,
                 external_p,
                 "eICU external",
-                clusters=eicu["uniquepid"].fillna(
-                    eicu["patientunitstayid"].astype(str)
-                ).to_numpy(),
+                clusters=hospital_clusters(eicu),
             ),
         ])
         paired_differences.to_csv(

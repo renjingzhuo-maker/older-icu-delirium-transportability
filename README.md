@@ -1,18 +1,19 @@
-# Older ICU Delirium Transportability
+# Explainable Older ICU Delirium Prediction and Transportability
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21613442.svg)](https://doi.org/10.5281/zenodo.21613442)
 
 Reproducible code for:
 
-> Interpretable Machine Learning Prediction of Late or Persistent Delirium in
-> Older ICU Patients: Multicenter Development and Transportability Assessment
-> Using MIMIC-IV and eICU-CRD
+> Explainable Prediction of Late or Persistent Delirium in Serially Assessed
+> Older ICU Patients: Development in MIMIC-IV and Multicenter Transportability
+> Assessment in eICU-CRD
 
 The study develops a first-24-hour prediction model in MIMIC-IV v3.1 and
 evaluates it without refitting in eICU-CRD v2.0. It also examines nursing
 assessment and treatment variables, model explanation, calibration,
 assessment-selection bias, hospital-level heterogeneity, and exploratory
-delirium trajectories.
+delirium trajectories. The repository also contains alternative-endpoint,
+regularized-logistic, coding-harmonization, and demographic subgroup analyses.
 
 ## Study Design
 
@@ -44,6 +45,11 @@ The locked analysis rules are documented in
 |-- 09_train_validate_models.py
 |-- 16_analyze_assessment_selection.py
 |-- 17_run_posthoc_diagnostics.ps1
+|-- 20_run_revision_analyses.py
+|-- 21_rerun_primary_models.py
+|-- 22_run_subgroup_analysis.py
+|-- 23_refresh_external_uncertainty.py
+|-- 24_rerun_ancillary_models.py
 |-- requirements.txt
 `-- R_PACKAGES.txt
 ```
@@ -145,24 +151,39 @@ directory:
 .\07_export_analysis_data.ps1 -Psql psql -DatabaseUser postgres
 ```
 
-### 4. Fit Trajectories and Prediction Models
+### 4. Fit Trajectories and the Full Prediction Workflow
 
 ```powershell
 Rscript 08_fit_gbtm.R .
 python 09_train_validate_models.py .
 ```
 
-### 5. Run Post-hoc Diagnostics
+The primary publication models can be regenerated separately:
+
+```powershell
+python 21_rerun_primary_models.py .
+```
+
+### 5. Run Transportability and Revision Analyses
 
 ```powershell
 .\17_run_posthoc_diagnostics.ps1 -Psql psql -Python python -DatabaseUser postgres
+python 16_analyze_assessment_selection.py .
+python 20_run_revision_analyses.py .
+python 22_run_subgroup_analysis.py .
+python 24_rerun_ancillary_models.py .
 ```
+
+`23_refresh_external_uncertainty.py` is a maintenance utility that refreshes
+hospital-and-patient hierarchical confidence intervals for previously fitted
+models.
 
 ### 6. Rebuild Manuscript Assets
 
 ```powershell
 python manuscript/18_build_manuscript_assets.py
 python manuscript/19_build_manuscript.py
+python manuscript/20_build_reporting_checklist.py
 ```
 
 ## Primary Outputs
@@ -182,16 +203,23 @@ Aggregate results and interpretation limits are summarized in:
 - Predictors are restricted to information available before ICU hour 24.
 - Identifiers and post-landmark fields are excluded from prediction.
 - External eICU evaluation is performed without refitting.
+- External confidence intervals use two-stage hospital-and-patient bootstrap
+  resampling.
+- Alternative endpoints and L2-regularized logistic models test dependence on
+  endpoint definition and algorithm choice.
+- Sex, age-group, and harmonized race subgroup estimates are suppressed when
+  fewer than 20 events or 20 non-events are available.
 - The exploratory trajectory analysis is not the primary prediction target.
 - Assessment-selection and hospital-heterogeneity analyses are reported because
   outcome observation was strongly institution dependent.
 
 ## Citation
 
-Citation metadata are provided in [`CITATION.cff`](CITATION.cff). Cite the
-exact software version used for an analysis:
+Citation metadata are provided in [`CITATION.cff`](CITATION.cff). The current
+release is version 1.1.0. Cite the exact software version used for an analysis:
 
 - Version 1.0.0: <https://doi.org/10.5281/zenodo.21613443>
+- Version 1.1.0: DOI pending release archival
 - All versions (concept DOI): <https://doi.org/10.5281/zenodo.21613442>
 
 The article DOI will be added after publication.

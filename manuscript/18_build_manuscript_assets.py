@@ -14,6 +14,42 @@ RESULTS = ROOT / "results"
 OUT = Path(__file__).resolve().parent / "assets"
 OUT.mkdir(parents=True, exist_ok=True)
 
+FEATURE_LABELS = {
+    "age": "Age",
+    "sex": "Sex",
+    "race": "Race/ethnicity",
+    "icu_type": "ICU type",
+    "admission_type": "Admission type",
+    "bmi": "Body mass index",
+    "gcs_min": "Minimum GCS",
+    "rass_min": "Minimum RASS",
+    "rass_max": "Maximum RASS",
+    "pain_mean": "Mean pain score",
+    "mechvent_24h": "Mechanical ventilation",
+    "vasoactive_24h": "Vasoactive medication",
+    "rrt_24h": "Renal replacement therapy",
+    "psychiatric_disorder": "Psychiatric disorder",
+    "alcohol_use_disorder": "Alcohol use disorder",
+    "urineoutput_24h": "Urine output",
+    "glucose_lab_max": "Maximum glucose",
+}
+
+
+def feature_label(feature: str) -> str:
+    if feature in FEATURE_LABELS:
+        return FEATURE_LABELS[feature]
+    label = feature
+    for suffix, replacement in [
+        ("_24h", " exposure"),
+        ("_min", ", minimum"),
+        ("_max", ", maximum"),
+        ("_mean", ", mean"),
+    ]:
+        if label.endswith(suffix):
+            label = label.removesuffix(suffix) + replacement
+            break
+    return label.replace("_", " ").capitalize()
+
 
 def normalize_columns(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
@@ -359,8 +395,63 @@ def draw_dca() -> None:
     plt.close(fig)
 
 
+def draw_calibration() -> None:
+    path = (
+        RESULTS
+        / "models"
+        / "nursing_enhanced_harmonized_calibration_bins.csv"
+    )
+    bins = pd.read_csv(path)
+    datasets = ["MIMIC internal OOF", "eICU external"]
+    colors = ["#2E74B5", "#B5523B"]
+    upper = min(
+        1.0,
+        max(
+            0.35,
+            float(
+                bins[["mean_predicted", "observed_rate"]]
+                .max()
+                .max()
+            )
+            * 1.12,
+        ),
+    )
+    fig, axes = plt.subplots(1, 2, figsize=(10.8, 4.7), dpi=220)
+    for ax, dataset, color in zip(axes, datasets, colors):
+        frame = bins[bins["dataset"] == dataset].sort_values(
+            "mean_predicted"
+        )
+        ax.plot([0, 1], [0, 1], color="#6C757D", ls="--", lw=1.2)
+        ax.plot(
+            frame["mean_predicted"],
+            frame["observed_rate"],
+            marker="o",
+            ms=5,
+            color=color,
+            lw=2,
+        )
+        ax.set_xlim(0, upper)
+        ax.set_ylim(0, upper)
+        ax.set_xlabel("Mean predicted probability")
+        ax.set_ylabel("Observed event proportion")
+        ax.set_title(dataset)
+        ax.grid(color="#D9DEE3", lw=0.7)
+    fig.tight_layout()
+    fig.savefig(
+        OUT / "figure_3_calibration.png",
+        bbox_inches="tight",
+        facecolor="white",
+    )
+    plt.close(fig)
+
+
 def build_table2() -> pd.DataFrame:
-    performance = pd.read_csv(RESULTS / "models" / "all_harmonized_model_performance.csv")
+    primary = RESULTS / "models" / "primary_harmonized_model_performance.csv"
+    performance = pd.read_csv(
+        primary
+        if primary.exists()
+        else RESULTS / "models" / "all_harmonized_model_performance.csv"
+    )
     keep = performance.loc[
         performance["dataset"].str.contains("clinical_baseline_harmonized|nursing_enhanced_harmonized", regex=True)
         & ~performance["dataset"].str.contains("without|missing", case=False, regex=True)
@@ -389,8 +480,8 @@ def build_table2() -> pd.DataFrame:
             "AUROC (95% CI)": ci("auroc"),
             "AUPRC (95% CI)": ci("auprc"),
             "Brier score (95% CI)": ci("brier"),
-            "Calibration intercept": keep["calibration_intercept"].map(lambda x: f"{x:.3f}"),
-            "Calibration slope": keep["calibration_slope"].map(lambda x: f"{x:.3f}"),
+            "Calibration intercept (95% CI)": ci("calibration_intercept"),
+            "Calibration slope (95% CI)": ci("calibration_slope"),
         }
     )
     return table
@@ -407,7 +498,12 @@ def build_table3() -> pd.DataFrame:
     labels = {
         ("mimic", "patient_features_only"): "MIMIC-IV: patient features",
         ("eicu", "patient_features_only"): "eICU: patient features",
+        ("eicu", "hospital_attributes_only"): "eICU: measured hospital attributes",
         ("eicu", "hospital_only"): "eICU: hospital identity",
+        (
+            "eicu",
+            "patient_features_plus_hospital_attributes",
+        ): "eICU: patient features + measured hospital attributes",
         ("eicu", "patient_features_plus_hospital"): "eICU: patient features + hospital identity",
     }
     table["Selection model"] = [
@@ -447,6 +543,7 @@ def build_table_s2() -> pd.DataFrame:
     labels = {
         "psychiatric_disorder": "Omit psychiatric disorder",
         "icu_type": "Omit ICU type",
+        "race": "Omit race",
     }
 
     def ci(row: pd.Series, metric: str) -> str:
@@ -482,6 +579,105 @@ def build_table_s2() -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
+def build_table_s1() -> pd.DataFrame:
+    profile = pd.read_csv(
+        RESULTS / "models" / "harmonized_feature_profile.csv"
+    )
+    rows = []
+    for row in profile.itertuples():
+        rows.append({
+            "Predictor": feature_label(row.feature),
+            "MIMIC-IV missing, %": f"{100 * row.mimic_missing:.1f}",
+            "eICU-CRD missing, %": f"{100 * row.eicu_missing:.1f}",
+            "Included in primary enhanced model": (
+                "Yes" if row.selected_primary == 1 else "No"
+            ),
+            "MIMIC-IV mean": (
+                f"{row.mimic_mean:.2f}"
+                if hasattr(row, "mimic_mean") and pd.notna(row.mimic_mean)
+                else "NA"
+            ),
+            "eICU-CRD mean": (
+                f"{row.eicu_mean:.2f}"
+                if hasattr(row, "eicu_mean") and pd.notna(row.eicu_mean)
+                else "NA"
+            ),
+            "Standardized mean difference": (
+                f"{row.standardized_mean_difference:.3f}"
+                if hasattr(row, "standardized_mean_difference")
+                and pd.notna(row.standardized_mean_difference)
+                else "NA"
+            ),
+        })
+    return pd.DataFrame(rows)
+
+
+def build_table_s3() -> pd.DataFrame:
+    endpoint = pd.read_csv(
+        RESULTS / "models" / "alternative_endpoint_performance.csv"
+    )
+    logistic = pd.read_csv(
+        RESULTS / "models" / "regularized_logistic_benchmark_performance.csv"
+    )
+    frames = []
+    for analysis, frame in [
+        ("Alternative endpoint", endpoint),
+        ("Regularized logistic benchmark", logistic),
+    ]:
+        temp = frame.copy()
+        temp.insert(0, "Analysis group", analysis)
+        frames.append(temp)
+    combined = pd.concat(frames, ignore_index=True)
+    return pd.DataFrame({
+        "Analysis group": combined["Analysis group"],
+        "Model / dataset": combined["dataset"],
+        "Endpoint": combined.get(
+            "endpoint",
+            pd.Series(["Primary"] * len(combined)),
+        ).fillna("Primary"),
+        "AUROC (95% CI)": [
+            f"{row.auroc:.3f} ({row.auroc_ci_low:.3f}-{row.auroc_ci_high:.3f})"
+            for row in combined.itertuples()
+        ],
+        "AUPRC (95% CI)": [
+            f"{row.auprc:.3f} ({row.auprc_ci_low:.3f}-{row.auprc_ci_high:.3f})"
+            for row in combined.itertuples()
+        ],
+        "Brier score (95% CI)": [
+            f"{row.brier:.3f} ({row.brier_ci_low:.3f}-{row.brier_ci_high:.3f})"
+            for row in combined.itertuples()
+        ],
+    })
+
+
+def build_table_s4() -> pd.DataFrame:
+    subgroup = pd.read_csv(
+        RESULTS / "models" / "primary_model_subgroup_performance.csv"
+    )
+    rows = []
+    for row in subgroup.itertuples():
+        estimable = row.estimable == 1
+        rows.append({
+            "Dataset": row.dataset,
+            "Subgroup variable": feature_label(row.subgroup_variable),
+            "Subgroup": row.subgroup,
+            "n": row.n,
+            "Events": row.events,
+            "AUROC (95% CI)": (
+                f"{row.auroc:.3f} ({row.auroc_ci_low:.3f}-"
+                f"{row.auroc_ci_high:.3f})"
+                if estimable else "Not estimated"
+            ),
+            "Calibration slope (95% CI)": (
+                f"{row.calibration_slope:.3f} "
+                f"({row.calibration_slope_ci_low:.3f}-"
+                f"{row.calibration_slope_ci_high:.3f})"
+                if estimable else "Not estimated"
+            ),
+        })
+    return pd.DataFrame(rows)
+
+
 def main() -> None:
     mimic_all = normalize_columns(pd.read_csv(DATA / "mimic_features_outcomes.csv", low_memory=False))
     eicu_all = normalize_columns(pd.read_csv(DATA / "eicu_features_outcomes.csv", low_memory=False))
@@ -497,11 +693,18 @@ def main() -> None:
     build_table_s2().to_csv(
         OUT / "table_s2_coding_harmonization_sensitivity.csv", index=False
     )
-
-    profile = pd.read_csv(RESULTS / "models" / "harmonized_feature_profile.csv")
-    profile.to_csv(OUT / "table_s1_feature_missingness.csv", index=False)
+    build_table_s1().to_csv(
+        OUT / "table_s1_feature_missingness.csv", index=False
+    )
+    build_table_s3().to_csv(
+        OUT / "table_s3_endpoint_and_logistic_sensitivity.csv", index=False
+    )
+    build_table_s4().to_csv(
+        OUT / "table_s4_subgroup_performance.csv", index=False
+    )
 
     draw_flow(m_flow, e_flow)
+    draw_calibration()
     draw_dca()
     print(f"Created manuscript assets in {OUT}")
     print(pd.DataFrame([m_flow, e_flow]).to_string(index=False))

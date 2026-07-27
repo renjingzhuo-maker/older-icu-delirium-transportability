@@ -1,6 +1,8 @@
 # Post-hoc data-quality and selection-mechanism audit
 
-> **Superseded on 2026-07-27:** Model and selection estimates were regenerated after correcting the eICU Caucasian race mapping, negative urine-output sentinel, and invalid GCS/sodium values. Use `FINAL_RESULTS_SUMMARY_2026-07-27.md` and the manuscript outputs for final numbers.
+Updated on 2026-07-27 after correcting the eICU Caucasian race mapping,
+negative urine-output sentinel, and invalid GCS/sodium values. Estimates below
+come from the final regenerated analysis.
 
 ## Scope and grain
 
@@ -48,14 +50,17 @@ of valid nursing records.
 | Selection model | Cross-validated AUROC | AUPRC |
 |---|---:|---:|
 | Patient features only | 0.717 | 0.132 |
+| Measured hospital attributes only | 0.755 | 0.102 |
+| Patient features + measured hospital attributes | 0.815 | 0.196 |
 | Hospital identity only | 0.936 | 0.312 |
-| Hospital + patient features | 0.944 | 0.376 |
+| Hospital identity + patient features | 0.944 | 0.377 |
 
 Cross-validated permutation of hospital identity reduces AUROC by 0.365 on
-average. The largest individual patient-feature decrease is 0.00585 for
-maximum sodium, reported as 0.006 after rounding to three decimal places.
-Hospital practice therefore dominates whether a patient has enough CAM-ICU
-assessment to enter external validation.
+average. No individual patient feature reduces AUROC by more than 0.004; the
+largest mean decrease is 0.00418 for minimum temperature. Hospital identity is
+therefore much more strongly associated with whether a patient has enough
+CAM-ICU assessment to enter external validation than any single measured
+patient feature.
 
 The selection-model folds are grouped by patient, not held out by hospital.
 This is intentional: hospital identity is used here to quantify known-site

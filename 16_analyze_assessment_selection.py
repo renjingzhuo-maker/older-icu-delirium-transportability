@@ -277,26 +277,28 @@ def make_eicu_figure(
 
     eicu_ablation = ablation[ablation["dataset"] == "eicu"].copy()
     labels = {
-        "patient_features_only": "Patient features",
-        "hospital_only": "Hospital only",
-        "patient_features_plus_hospital": "Hospital + patient",
+        "patient_features_only": "Patient",
+        "hospital_attributes_only": "Hospital attributes",
+        "hospital_only": "Site identity",
+        "patient_features_plus_hospital_attributes": "Attributes + patient",
+        "patient_features_plus_hospital": "Site + patient",
     }
     eicu_ablation["label"] = eicu_ablation["model_variant"].map(labels)
     axes[0].bar(
         eicu_ablation["label"],
         eicu_ablation["auroc"],
-        color=["#287D8E", "#C44E52", "#4C72B0"],
+        color=["#287D8E", "#8172B3", "#C44E52", "#55A868", "#4C72B0"],
     )
     axes[0].axhline(0.5, color="#555555", linestyle=":", linewidth=1)
     axes[0].set_ylim(0.5, 1.0)
     axes[0].set_ylabel("Cross-validated AUROC")
     axes[0].set_title("Selection-model ablation")
-    axes[0].tick_params(axis="x", rotation=20)
+    axes[0].tick_params(axis="x", rotation=15)
     for index, value in enumerate(eicu_ablation["auroc"]):
         axes[0].text(index, value + 0.01, f"{value:.3f}", ha="center")
 
     axes[1].barh(
-        top["feature"],
+        top["feature"].str.replace("_", " ", regex=False),
         top["mean_auroc_decrease"],
         color=colors,
         xerr=top["sd_auroc_decrease"].fillna(0),
@@ -475,6 +477,58 @@ def main() -> None:
         fitted_models[(source, "patient_features_only")] = model
 
         if source == "eicu":
+            hospital_attributes = [
+                feature
+                for feature in ["teachingstatus", "numbedscategory", "region"]
+                if feature in data.columns
+            ]
+            if hospital_attributes:
+                row, model = fit_selection_variant(
+                    data,
+                    target,
+                    groups,
+                    hospital_attributes,
+                    hospital_attributes,
+                    source,
+                    "hospital_attributes_only",
+                    module.SEED,
+                )
+                rows.append(row)
+                fitted_models[
+                    (source, "hospital_attributes_only")
+                ] = model
+                row, model = fit_selection_variant(
+                    data,
+                    target,
+                    groups,
+                    clinical + hospital_attributes,
+                    categorical + hospital_attributes,
+                    source,
+                    "patient_features_plus_hospital_attributes",
+                    module.SEED,
+                )
+                rows.append(row)
+                fitted_models[
+                    (
+                        source,
+                        "patient_features_plus_hospital_attributes",
+                    )
+                ] = model
+                (
+                    data.groupby(hospital_attributes, dropna=False)
+                    .agg(
+                        candidate_n=("assessment_selected", "size"),
+                        selected_n=("assessment_selected", "sum"),
+                        selection_rate=("assessment_selected", "mean"),
+                        hospitals=("hospitalid", "nunique"),
+                    )
+                    .reset_index()
+                    .to_csv(
+                        result_dir
+                        / "eicu_selection_by_hospital_attributes.csv",
+                        index=False,
+                    )
+                )
             data["selection_site"] = (
                 data["hospitalid"].fillna(-1).astype(int).astype(str)
             )

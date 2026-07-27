@@ -32,7 +32,7 @@ git push -u origin main
 1. Sign in to Zenodo and connect the GitHub account.
 2. Enable the repository in the Zenodo GitHub settings.
 3. Update `CITATION.cff` with the final repository URL.
-4. Create GitHub release `v1.0.0`.
+4. Create a semantic-versioned GitHub release, currently `v1.1.0`.
 5. Wait for Zenodo to archive the release and assign a DOI.
 6. Add the version DOI to `CITATION.cff` and the manuscript Code Availability
    statement.

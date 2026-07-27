@@ -111,10 +111,17 @@ def get_baseline_value(rows: list[dict[str, str]], characteristic: str, database
 def build_context() -> dict[str, str]:
     counts = json.loads((MODELS / "analysis_counts.json").read_text(encoding="utf-8"))
     performance = read_rows(MODELS / "all_harmonized_model_performance.csv")
-    clinical_internal = find_performance(performance, "MIMIC internal OOF", "clinical_baseline_harmonized")
-    clinical_external = find_performance(performance, "eICU external", "clinical_baseline_harmonized")
-    enhanced_internal = find_performance(performance, "MIMIC internal OOF", "nursing_enhanced_harmonized")
-    enhanced_external = find_performance(performance, "eICU external", "nursing_enhanced_harmonized")
+    primary_performance_path = (
+        MODELS / "primary_harmonized_model_performance.csv"
+    )
+    primary_performance = (
+        read_rows(primary_performance_path)
+        if primary_performance_path.exists() else performance
+    )
+    clinical_internal = find_performance(primary_performance, "MIMIC internal OOF", "clinical_baseline_harmonized")
+    clinical_external = find_performance(primary_performance, "eICU external", "clinical_baseline_harmonized")
+    enhanced_internal = find_performance(primary_performance, "MIMIC internal OOF", "nursing_enhanced_harmonized")
+    enhanced_external = find_performance(primary_performance, "eICU external", "nursing_enhanced_harmonized")
     no_antipsychotic = find_performance(
         performance,
         "eICU external",
@@ -132,6 +139,11 @@ def build_context() -> dict[str, str]:
         coding_sensitivity,
         "eICU external",
         "nursing_without_icu_type_harmonized",
+    )
+    no_race_external = find_performance(
+        coding_sensitivity,
+        "eICU external",
+        "nursing_without_race_harmonized",
     )
     coding_sensitivity_differences = {
         row["omitted_feature"]: row
@@ -167,6 +179,14 @@ def build_context() -> dict[str, str]:
     )
     hospital_only = next(row for row in ablation if row["model_variant"] == "hospital_only")
     combined = next(row for row in ablation if row["model_variant"] == "patient_features_plus_hospital")
+    hospital_attributes = next(
+        row for row in ablation
+        if row["model_variant"] == "hospital_attributes_only"
+    )
+    combined_attributes = next(
+        row for row in ablation
+        if row["model_variant"] == "patient_features_plus_hospital_attributes"
+    )
     mimic_selection = next(
         row for row in ablation
         if row["dataset"] == "mimic" and row["model_variant"] == "patient_features_only"
@@ -200,6 +220,60 @@ def build_context() -> dict[str, str]:
     urine_missing = float(profile["urineoutput_24h"]["eicu_missing"])
 
     broad = read_one(MODELS / "broad_missing_as_negative_performance.csv")
+    recalibration = {
+        row["recalibration_method"]: row
+        for row in read_rows(
+            MODELS
+            / "nursing_enhanced_harmonized_recalibration_diagnostics.csv"
+        )
+    }
+    endpoint_performance = read_rows(
+        MODELS / "alternative_endpoint_performance.csv"
+    )
+    endpoint_counts = read_rows(
+        MODELS / "alternative_endpoint_counts.csv"
+    )
+    logistic_performance = read_rows(
+        MODELS / "regularized_logistic_benchmark_performance.csv"
+    )
+    logistic_clinical_external = find_performance(
+        logistic_performance,
+        "eICU external",
+        "clinical_logistic_harmonized",
+    )
+    logistic_enhanced_external = find_performance(
+        logistic_performance,
+        "eICU external",
+        "nursing_enhanced_logistic_harmonized",
+    )
+
+    def endpoint_row(endpoint: str, model: str, prefix: str) -> dict[str, str]:
+        matches = [
+            row for row in endpoint_performance
+            if row["endpoint"] == endpoint
+            and row["dataset"].startswith(prefix)
+            and model in row["dataset"]
+        ]
+        if len(matches) != 1:
+            raise ValueError(
+                f"Expected one endpoint row for {endpoint}, {model}, {prefix}"
+            )
+        return matches[0]
+
+    strict_enhanced_external = endpoint_row(
+        "strict_two_positive_days",
+        "nursing_enhanced_strict_two_positive_days_harmonized",
+        "eICU external",
+    )
+    any_enhanced_external = endpoint_row(
+        "any_post24_delirium",
+        "nursing_enhanced_any_post24_delirium_harmonized",
+        "eICU external",
+    )
+    endpoint_count_map = {
+        (row["endpoint"], row["dataset"]): row
+        for row in endpoint_counts
+    }
     trajectory_performance = read_rows(MODELS / "multiclass_trajectory_performance.csv")
     trajectory_external = next(
         row for row in trajectory_performance if row["dataset"].startswith("eICU")
@@ -274,7 +348,14 @@ def build_context() -> dict[str, str]:
         ),
         "ENH_EXT_CAL_INTERCEPT": f"{float(enhanced_external['calibration_intercept']):.3f}",
         "ENH_EXT_CAL_SLOPE": f"{float(enhanced_external['calibration_slope']):.3f}",
+        "ENH_EXT_CAL_INTERCEPT_CI": metric_ci(
+            enhanced_external, "calibration_intercept"
+        ),
+        "ENH_EXT_CAL_SLOPE_CI": metric_ci(
+            enhanced_external, "calibration_slope"
+        ),
         "ENH_EXT_ECE": f"{float(enhanced_external['ece_10']):.3f}",
+        "ENH_EXT_ECE_CI": metric_ci(enhanced_external, "ece_10"),
         "ENH_EXT_AUROC_POINT": f"{float(enhanced_external['auroc']):.3f}",
         "ENH_THRESHOLD": f"{float(enhanced_internal['threshold']):.3f}",
         "ENH_EXT_SENSITIVITY": f"{float(enhanced_external['sensitivity']):.3f}",
@@ -291,6 +372,8 @@ def build_context() -> dict[str, str]:
         "EICU_SELECTION_RATE": f"{100 * float(patient_only['selection_rate']):.2f}",
         "EICU_PATIENT_ONLY_AUC": f"{float(patient_only['auroc']):.3f}",
         "EICU_HOSPITAL_ONLY_AUC": f"{float(hospital_only['auroc']):.3f}",
+        "EICU_HOSPITAL_ATTRIBUTES_AUC": f"{float(hospital_attributes['auroc']):.3f}",
+        "EICU_PATIENT_ATTRIBUTES_AUC": f"{float(combined_attributes['auroc']):.3f}",
         "EICU_COMBINED_SELECTION_AUC": f"{float(combined['auroc']):.3f}",
         "HOSPITAL_PERMUTATION_DROP": f"{float(hospital_permutation['mean_auroc_decrease']):.3f}",
         "MAX_PATIENT_PERMUTATION_DROP": f"{max(patient_permutation):.3f}",
@@ -336,6 +419,32 @@ def build_context() -> dict[str, str]:
             f"{float(coding_sensitivity_differences['icu_type']['difference_ci_low']):.3f} to "
             f"{float(coding_sensitivity_differences['icu_type']['difference_ci_high']):.3f})"
         ),
+        "NO_RACE_AUC_CI": metric_ci(no_race_external, "auroc"),
+        "NO_RACE_DELTA_FULL": (
+            f"{float(coding_sensitivity_differences['race']['auroc_difference']):.3f} "
+            f"(95% CI "
+            f"{float(coding_sensitivity_differences['race']['difference_ci_low']):.3f} to "
+            f"{float(coding_sensitivity_differences['race']['difference_ci_high']):.3f})"
+        ),
+        "LOGISTIC_CLINICAL_EXT_AUC_CI": metric_ci(
+            logistic_clinical_external, "auroc"
+        ),
+        "LOGISTIC_ENHANCED_EXT_AUC_CI": metric_ci(
+            logistic_enhanced_external, "auroc"
+        ),
+        "STRICT_ENDPOINT_EXT_AUC_CI": metric_ci(
+            strict_enhanced_external, "auroc"
+        ),
+        "ANY_ENDPOINT_EXT_AUC_CI": metric_ci(
+            any_enhanced_external, "auroc"
+        ),
+        "STRICT_MIMIC_EVENTS": f"{int(endpoint_count_map[('strict_two_positive_days', 'MIMIC')]['events']):,}",
+        "STRICT_EICU_EVENTS": f"{int(endpoint_count_map[('strict_two_positive_days', 'eICU')]['events']):,}",
+        "ANY_MIMIC_EVENTS": f"{int(endpoint_count_map[('any_post24_delirium', 'MIMIC')]['events']):,}",
+        "ANY_EICU_EVENTS": f"{int(endpoint_count_map[('any_post24_delirium', 'eICU')]['events']):,}",
+        "RECAL_INTERCEPT_BRIER": f"{float(recalibration['intercept_only']['brier']):.3f}",
+        "RECAL_FULL_BRIER": f"{float(recalibration['intercept_and_slope']['brier']):.3f}",
+        "RECAL_FULL_ECE": f"{float(recalibration['intercept_and_slope']['ece_10']):.3f}",
         "MISSING_INDICATOR_AUC_CI": metric_ci(missing_indicator, "auroc"),
         "FULL_INDICATOR_AUC_CI": metric_ci(full_indicator, "auroc"),
         "BROAD_AUC": f"{float(broad['auroc']):.3f}",
@@ -350,12 +459,13 @@ def build_context() -> dict[str, str]:
         "TRAJECTORY_EXT_AUC": f"{float(trajectory_external['macro_ovr_auroc']):.3f}",
         "POSTGRES_VERSION": "18.4",
         "PYTHON_VERSION": "3.13.12",
-        "PANDAS_VERSION": "3.0.1",
-        "SKLEARN_VERSION": "1.8.0",
+        "PANDAS_VERSION": "3.0.5",
+        "SKLEARN_VERSION": "1.9.0",
         "XGBOOST_VERSION": "3.3.0",
-        "SHAP_VERSION": "0.52.0",
+        "SHAP_VERSION": "0.50.0",
         "R_VERSION": "4.6.0",
         "LCMM_VERSION": "2.2.2",
+        "ZENODO_VERSION_URL": "https://doi.org/10.5281/zenodo.21613442",
     }
     return context
 
@@ -402,12 +512,16 @@ FIGURES = {
         "Figure 2. SHAP summary for the enhanced model.",
     ),
     "[[FIGURE3]]": (
-        MODELS / "eicu_assessment_selection_mechanism.png",
-        "Figure 3. Assessment-selection mechanism in eICU-CRD.",
+        ASSETS / "figure_3_calibration.png",
+        "Figure 3. Calibration of the enhanced model.",
     ),
     "[[FIGURE4]]": (
+        MODELS / "eicu_assessment_selection_mechanism.png",
+        "Figure 4. Assessment-selection mechanism in eICU-CRD.",
+    ),
+    "[[FIGURE5]]": (
         MODELS / "nursing_enhanced_harmonized_eicu_hospital_auroc_forest.png",
-        "Figure 4. Hospital-level external AUROC.",
+        "Figure 5. Hospital-level external AUROC.",
     ),
     "[[FIGURES1]]": (
         GBTM / "mimic_trajectory_profiles.png",
@@ -440,6 +554,14 @@ TABLES = {
     "[[TABLES2]]": (
         ASSETS / "table_s2_coding_harmonization_sensitivity.csv",
         "Supplementary Table S2. Coding-harmonization sensitivity analyses.",
+    ),
+    "[[TABLES3]]": (
+        ASSETS / "table_s3_endpoint_and_logistic_sensitivity.csv",
+        "Supplementary Table S3. Alternative endpoint and regularized logistic regression analyses.",
+    ),
+    "[[TABLES4]]": (
+        ASSETS / "table_s4_subgroup_performance.csv",
+        "Supplementary Table S4. Performance by sex, age group, and harmonized race category.",
     ),
 }
 
@@ -569,6 +691,8 @@ def add_table(document: Document, path: Path, caption: str) -> None:
         "[[TABLE3]]": [2250, 1050, 1350, 900, 900, 1650],
         "[[TABLES1]]": [1800, 1100, 1100, 1050, 1100, 1100, 1500],
         "[[TABLES2]]": [1800, 1100, 1250, 1250, 700, 1300, 1960],
+        "[[TABLES3]]": [1450, 2450, 1350, 1370, 1370, 1370],
+        "[[TABLES4]]": [1250, 1250, 1050, 650, 700, 1900, 2560],
     }
     marker = next(key for key, value in TABLES.items() if value[0] == path)
     widths = table_widths.get(marker)
@@ -590,17 +714,28 @@ def add_table(document: Document, path: Path, caption: str) -> None:
         note.add_run(
             "OOF indicates out-of-fold; AUROC, area under the receiver operating characteristic curve; "
             "AUPRC, area under the precision-recall curve. Confidence intervals use 500 bootstrap samples; "
-            "external samples were clustered by patient."
+            "external samples used two-stage hospital-and-patient resampling."
         )
     elif marker == "[[TABLES2]]":
         note.add_run(
             "Analyses were post hoc; external AUROC differences used 1,000 "
-            "patient-clustered bootstrap samples."
+            "two-stage hospital-and-patient bootstrap samples."
         )
     elif marker == "[[TABLE3]]":
         note.add_run(
             "Selection denotes meeting the strict baseline-negative and longitudinal assessment criteria. "
             "IPW effective sample size is reported for the patient-feature propensity model used in weighting."
+        )
+    elif marker == "[[TABLES3]]":
+        note.add_run(
+            "All XGBoost sensitivity models repeated nested tuning. External "
+            "confidence intervals used two-stage hospital-and-patient resampling."
+        )
+    elif marker == "[[TABLES4]]":
+        note.add_run(
+            "Subgroup estimates were suppressed when fewer than 20 events or "
+            "20 non-events were available. Estimates are descriptive and were "
+            "not adjusted for multiplicity."
         )
 
 
@@ -737,7 +872,7 @@ def configure_document(document: Document) -> None:
 
     header = section.header.paragraphs[0]
     header.alignment = WD_ALIGN_PARAGRAPH.RIGHT
-    run = header.add_run("Draft manuscript | Delirium prediction transportability")
+    run = header.add_run("Delirium prediction transportability")
     set_run_font(run, size=8)
     run.font.color.rgb = RGBColor(110, 118, 126)
     add_page_number(section.footer.paragraphs[0])
@@ -800,8 +935,8 @@ def build_docx(base_text: str) -> None:
         add_inline_runs(paragraph, line)
 
     document.core_properties.title = (
-        "Interpretable Machine Learning Prediction of Late or Persistent Delirium "
-        "in Older ICU Patients"
+        "Explainable Prediction of Late or Persistent Delirium in Serially "
+        "Assessed Older ICU Patients"
     )
     document.core_properties.subject = "MIMIC-IV development and eICU-CRD transportability assessment"
     document.core_properties.author = "Ren Jingzhuo; Zhang Qiannan; Liu Lixin; Xue Zhaoping"

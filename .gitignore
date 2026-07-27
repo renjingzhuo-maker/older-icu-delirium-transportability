@@ -49,6 +49,7 @@ manuscript/assets/
 manuscript/rendered*/
 manuscript/*.docx
 manuscript/*.pdf
+!manuscript/TRIPOD_AI_CHECKLIST.docx
 
 # Logs, caches, and environments
 *.log

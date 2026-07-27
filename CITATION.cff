@@ -1,10 +1,9 @@
 cff-version: 1.2.0
 message: "If you use this software, please cite the accompanying article and this software release."
-title: "Older ICU Delirium Transportability"
+title: "Explainable Older ICU Delirium Prediction and Transportability"
 type: software
-version: 1.0.0
+version: 1.1.0
 date-released: 2026-07-27
-doi: 10.5281/zenodo.21613443
 license: MIT
 repository-code: "https://github.com/renjingzhuo-maker/older-icu-delirium-transportability"
 authors:
@@ -18,8 +17,11 @@ authors:
     given-names: Zhaoping
 abstract: >-
   Reproducible SQL, Python, R, and PowerShell code for development in MIMIC-IV
-  and external evaluation in eICU-CRD of an interpretable first-24-hour model
-  for late or persistent delirium in older intensive care patients.
+  and external evaluation in eICU-CRD of an explainable first-24-hour model
+  for late or persistent delirium in serially assessed older intensive care
+  patients, including hierarchical external uncertainty, assessment-selection
+  analysis, hospital heterogeneity, alternative endpoints, and subgroup
+  diagnostics.
 keywords:
   - delirium
   - intensive care

@@ -6,9 +6,15 @@ SET search_path TO delirium_trajectory, eicu_crd, public;
 DROP TABLE IF EXISTS eicu_features_24h CASCADE;
 CREATE TABLE eicu_features_24h AS
 WITH cohort AS (
-    SELECT c.*, p.hospitaladmitsource
+    SELECT
+        c.*,
+        p.hospitaladmitsource,
+        h.teachingstatus,
+        h.numbedscategory,
+        h.region
     FROM eicu_trajectory_cohort c
     JOIN eicu_crd.patient p USING (patientunitstayid)
+    LEFT JOIN eicu_crd.hospital h ON h.hospitalid = c.hospitalid
 ),
 apache AS (
     SELECT
@@ -356,6 +362,9 @@ SELECT
     c.unitadmitsource AS admission_type,
     c.apacheadmissiondx,
     c.hospitaladmitsource,
+    c.teachingstatus,
+    c.numbedscategory,
+    c.region,
     c.unitdischargeoffset / 1440.0 AS los_icu,
     c.unitdischargestatus,
     c.admissionheight AS height,

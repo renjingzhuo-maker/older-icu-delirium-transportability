@@ -1,4 +1,4 @@
-# Interpretable Machine Learning Prediction of Late or Persistent Delirium in Older ICU Patients: Multicenter Development and Transportability Assessment Using MIMIC-IV and eICU-CRD
+# Explainable Prediction of Late or Persistent Delirium in Serially Assessed Older ICU Patients: Development in MIMIC-IV and Multicenter Transportability Assessment in eICU-CRD
 
 **Short title:** Transportability of delirium prediction in older ICU patients
 
@@ -10,21 +10,19 @@
 
 **Corresponding author:** Xue Zhaoping, The First Bethune Hospital of Jilin University, No. 1 Xinmin Street, Changchun, Jilin, China, 130021. Email: xuezp@mails.jlu.edu.cn.
 
-**Manuscript status:** Draft for author review
-
 **Word count:** {{WORD_COUNT}}
 
 [[PAGE_BREAK]]
 
 ## Abstract
 
-**Background:** Delirium risk models developed from electronic health records may fail across hospitals because both clinical data and delirium assessment practices vary. We developed and externally evaluated an interpretable model for late or persistent delirium in older intensive care unit (ICU) patients and quantified the contribution of the assessment process to transportability.
+**Background:** Delirium risk models developed from electronic health records may fail across hospitals because both clinical data and delirium assessment practices vary. We developed and externally evaluated an explainable model for late or persistent delirium in older intensive care unit (ICU) patients and quantified associations between the assessment process and transportability.
 
-**Methods:** We conducted a retrospective prediction-model study using MIMIC-IV version 3.1 for development and eICU-CRD version 2.0 for external evaluation. Eligible patients were aged 65 years or older, had a first ICU stay longer than 24 hours, had a documented negative delirium assessment during ICU hours 0-24, and had at least two observed daily Confusion Assessment Method for the ICU assessments during ICU days 2-5. Predictors were restricted to the first 24 hours. Extreme gradient boosting models were evaluated with patient-grouped nested cross-validation in MIMIC-IV and without refitting in eICU-CRD. A clinical baseline model was compared with a nursing-assessment and treatment-enhanced model. We evaluated discrimination, calibration, decision curves, SHapley Additive exPlanations, inverse-probability weighting, and hospital-level heterogeneity.
+**Methods:** We conducted a retrospective prediction-model study using MIMIC-IV version 3.1 for development and eICU-CRD version 2.0 for external evaluation. Eligible patients were aged 65 years or older, had a first ICU stay longer than 24 hours, had a documented negative delirium assessment during ICU hours 0-24, and had at least two observed daily Confusion Assessment Method for the ICU assessments during ICU days 2-5. Predictors were restricted to the first 24 hours. Extreme gradient boosting models were evaluated with patient-grouped nested cross-validation in MIMIC-IV and without refitting in eICU-CRD. A clinical baseline model was compared with a nursing-assessment and treatment-enhanced model. External uncertainty used two-stage hospital-and-patient bootstrap resampling. We evaluated discrimination, calibration, SHapley Additive exPlanations, assessment-selection mechanisms, and hospital-level heterogeneity.
 
-**Results:** The primary cohorts included {{MIMIC_N}} MIMIC-IV stays ({{MIMIC_EVENTS}} events; {{MIMIC_RATE}}%) and {{EICU_N}} eICU-CRD stays ({{EICU_EVENTS}} events; {{EICU_RATE}}%). The enhanced model achieved an internally validated AUROC of {{ENH_INT_AUROC_CI}} and an external AUROC of {{ENH_EXT_AUROC_CI}}, compared with {{CLIN_INT_AUROC_CI}} and {{CLIN_EXT_AUROC_CI}} for the clinical baseline model. The paired AUROC improvement was {{DELTA_MIMIC}} in MIMIC-IV and {{DELTA_EICU}} in eICU-CRD. External calibration remained imperfect (intercept {{ENH_EXT_CAL_INTERCEPT}}; slope {{ENH_EXT_CAL_SLOPE}}). Only {{EICU_SELECTION_RATE}}% of eICU candidates entered the strict cohort. Selection was predicted substantially better by hospital identity alone (AUROC {{EICU_HOSPITAL_ONLY_AUC}}) than by patient features alone (AUROC {{EICU_PATIENT_ONLY_AUC}}); permuting hospital identity decreased AUROC by {{HOSPITAL_PERMUTATION_DROP}}.
+**Results:** The primary cohorts included {{MIMIC_N}} MIMIC-IV stays ({{MIMIC_EVENTS}} events; {{MIMIC_RATE}}%) and {{EICU_N}} eICU-CRD stays ({{EICU_EVENTS}} events; {{EICU_RATE}}%). The enhanced model achieved an internally validated AUROC of {{ENH_INT_AUROC_CI}} and an external AUROC of {{ENH_EXT_AUROC_CI}}, compared with {{CLIN_INT_AUROC_CI}} and {{CLIN_EXT_AUROC_CI}} for the clinical baseline model. The paired AUROC improvement was {{DELTA_MIMIC}} in MIMIC-IV and {{DELTA_EICU}} in eICU-CRD. External calibration remained imperfect (intercept {{ENH_EXT_CAL_INTERCEPT_CI}}; slope {{ENH_EXT_CAL_SLOPE_CI}}). Only {{EICU_SELECTION_RATE}}% of eICU candidates entered the strict cohort. Selection was predicted by measured hospital attributes (AUROC {{EICU_HOSPITAL_ATTRIBUTES_AUC}}) and more strongly by hospital identity ({{EICU_HOSPITAL_ONLY_AUC}}); permuting hospital identity decreased AUROC by {{HOSPITAL_PERMUTATION_DROP}}.
 
-**Conclusions:** Early nursing assessments and treatment exposures improved discrimination across databases, but the model was not ready for bedside deployment because calibration and hospital-level performance were heterogeneous. Hospital-specific delirium assessment practice, rather than patient characteristics alone, was the dominant constraint on external cohort representativeness and model transportability.
+**Conclusions:** Early nursing assessments and treatment exposures improved discrimination across databases, but the model was not ready for bedside deployment because calibration and hospital-level performance were heterogeneous. Hospital identity strongly predicted whether sufficiently serial delirium assessments were available, constraining external-cohort representativeness and the scope of transportability claims.
 
 **Keywords:** delirium; intensive care unit; older adults; machine learning; external validation; transportability; nursing assessment; selection bias
 
@@ -36,13 +34,13 @@ Routine delirium surveillance is central to contemporary ICU practice. The Confu
 
 Existing ICU delirium prediction models include PRE-DELIRIC, E-PRE-DELIRIC, and more recent machine-learning approaches [7-10]. Some models have achieved strong discrimination in their development settings, but model accuracy alone does not establish clinical usefulness. Independent evaluation commonly reveals lower discrimination or miscalibration, and external validation remains uncommon among ICU artificial intelligence studies [11]. Transportability may be further compromised when the outcome is recorded only in hospitals that routinely perform structured delirium assessments. Under such informative observation, apparent external validity pertains to a selected care process as well as to a patient population.
 
-We therefore aimed to: (1) develop an interpretable first-24-hour prediction model for late or persistent delirium in older ICU patients; (2) quantify the incremental value of nursing assessments and treatment exposures beyond a harmonized clinical baseline; (3) evaluate transportability from MIMIC-IV to eICU-CRD without model refitting; and (4) determine whether hospital-level delirium assessment practice explained external cohort selection and performance heterogeneity. A secondary exploratory objective was to characterize daily delirium trajectories while avoiding unsupported claims about latent subtypes.
+We therefore aimed to: (1) develop an explainable first-24-hour prediction model for late or persistent delirium in older ICU patients; (2) quantify the incremental value of nursing assessments and treatment exposures beyond a harmonized clinical baseline; (3) evaluate transportability from MIMIC-IV to eICU-CRD without model refitting; and (4) quantify the association of hospital-level delirium assessment practice with external-cohort selection and performance heterogeneity. An exploratory trajectory analysis was retained only in the Supplement.
 
 ## Methods
 
 ### Study Design and Data Sources
 
-This retrospective prediction-model development and external evaluation study used two deidentified critical care databases available through PhysioNet. MIMIC-IV version 3.1 contains detailed hospital and ICU data from Beth Israel Deaconess Medical Center in Boston, Massachusetts [12]. eICU-CRD version 2.0 contains high-granularity data from more than 200 US hospitals participating in the Philips eICU program in 2014-2015 [13]. MIMIC-IV was used for model development and internal validation; eICU-CRD was reserved for external evaluation.
+This retrospective prediction-model development and external evaluation study used two deidentified critical care databases available through PhysioNet. MIMIC-IV version 3.1 contains detailed hospital and ICU data from Beth Israel Deaconess Medical Center in Boston, Massachusetts, for admissions during 2008-2022 [12]. eICU-CRD version 2.0 contains high-granularity data from 208 US hospitals participating in the Philips eICU program in 2014-2015 [13]. MIMIC-IV was used for model development and internal validation; eICU-CRD was reserved for external evaluation.
 
 The analysis unit was one ICU stay. We retained the first eligible ICU stay per patient to avoid dependence from repeated admissions and included patients aged 65 years or older with an ICU stay longer than 24 hours. Database-specific identifiers were used only for linkage, grouping, and auditing and were excluded from prediction.
 
@@ -66,15 +64,17 @@ Numeric variables were median-imputed using development data within each cross-v
 
 ### Model Development and Internal Validation
 
-We fitted extreme gradient boosting classifiers (XGBoost) [14]. The clinical baseline and enhanced models used identical tuning procedures. Internal performance was estimated with five-fold stratified group cross-validation, grouping by patient. Within each outer training fold, hyperparameters were selected by three-fold stratified group cross-validation using eight randomized configurations and AUROC as the optimization metric. A final 20-configuration randomized search was performed on the complete MIMIC-IV development cohort, after which the selected model was refitted on all development observations.
+We fitted extreme gradient boosting classifiers (XGBoost) [14]. The clinical baseline and enhanced models used identical tuning procedures. Internal performance was estimated with five-fold stratified group cross-validation, grouping by patient. Within each outer training fold, hyperparameters were selected by three-fold stratified group cross-validation using 20 randomized configurations and AUROC as the optimization metric. The same 20-configuration budget was used for the final randomized search on the complete MIMIC-IV development cohort, after which the selected model was refitted on all development observations.
+
+The effective sample size was determined by all eligible stays available in the two databases rather than by a target significance level. The development cohort contained {{MIMIC_EVENTS}} primary-endpoint events for {{ENHANCED_FEATURE_COUNT}} candidate raw predictors, while all reported internal estimates were based on held-out out-of-fold predictions. This event count, nested validation, regularization, and comparison with a full-feature penalized logistic model were used to limit and diagnose overfitting; no post-hoc predictor screening based on outcome association was performed.
 
 The search space covered 200-700 trees, maximum depth 2-5, learning rate 0.02-0.10, minimum child weight 1-10, row and column subsampling, and L1/L2 regularization. The final enhanced model used {{FINAL_MODEL_PARAMETERS}}. The operating threshold was selected from pooled out-of-fold MIMIC-IV predictions using Youden's index and was transferred unchanged to eICU-CRD.
 
 ### External Evaluation and Performance Measures
 
-No eICU observation was used for tuning, threshold selection, feature imputation, or model refitting. We reported AUROC, area under the precision-recall curve (AUPRC), Brier score, log loss, calibration-in-the-large, calibration slope, expected calibration error across 10 quantile groups, sensitivity, specificity, positive predictive value, and negative predictive value [15,16]. Ninety-five percent confidence intervals were estimated from 500 bootstrap samples; external resampling was clustered by patient. The difference in AUROC between the clinical and enhanced models used 1,000 paired bootstrap samples.
+No eICU observation was used for tuning, threshold selection, feature imputation, or model refitting. We reported AUROC, area under the precision-recall curve (AUPRC), Brier score, log loss, calibration-in-the-large, calibration slope, expected calibration error across 10 quantile groups, sensitivity, specificity, positive predictive value, and negative predictive value [15,16]. Ninety-five percent confidence intervals were estimated from 500 bootstrap samples. External uncertainty used two-stage resampling: hospitals were sampled with replacement and patients were then sampled with replacement within each selected hospital. The difference in AUROC between the clinical and enhanced models used 1,000 paired bootstrap samples with the same external hierarchy.
 
-Decision-curve analysis compared model-guided intervention with treat-all and treat-none strategies across threshold probabilities of 0.01-0.50 [17]. Because external calibration and the simplified score were not adequate for implementation, decision curves were considered supportive rather than evidence for deployment.
+Calibration was plotted in 10 quantile groups for MIMIC-IV out-of-fold predictions and frozen eICU predictions. External calibration intercept, slope, and expected calibration error received hospital-hierarchical bootstrap confidence intervals. Intercept-only and intercept-plus-slope recalibration were evaluated on the complete external cohort as apparent diagnostic analyses, not as independently validated updated models. Decision-curve analysis was retained only in the Supplement because inadequate external calibration precluded implementation claims [17].
 
 ### Explainability Analysis
 
@@ -82,7 +82,7 @@ SHapley Additive exPlanations (SHAP) were calculated for the enhanced XGBoost mo
 
 ### Assessment-Selection Mechanism
 
-Requiring documented baseline and follow-up CAM-ICU assessments may induce selection bias. We therefore modeled entry into the strict cohort among all otherwise eligible older first ICU stays longer than 24 hours. Patient-feature-only logistic models were fitted in both databases. In eICU-CRD, we additionally fitted a hospital-identity-only model and a combined patient-feature plus hospital-identity model. Five-fold cross-validation was grouped by patient, not held out by hospital, because this analysis was designed to quantify known hospitals' assessment policies rather than predict behavior in unseen hospitals.
+Requiring documented baseline and follow-up CAM-ICU assessments may induce selection bias. We therefore modeled entry into the strict cohort among all otherwise eligible older first ICU stays longer than 24 hours. Patient-feature-only logistic models were fitted in both databases. In eICU-CRD, we additionally fitted models containing hospital teaching status, bed-number category, and US region; hospital identity alone; and combinations of patient features with either measured hospital attributes or hospital identity. Five-fold cross-validation was grouped by patient, not held out by hospital, because this descriptive analysis was designed to quantify differences among known hospitals' assessment practices rather than predict behavior in unseen hospitals. These models estimate associations with assessment availability and do not establish that assessment practice caused the prediction model's performance change.
 
 Permutation importance measured the decrease in cross-validated AUROC after shuffling hospital identity or individual patient features. Stabilized inverse-probability-of-selection weights were truncated at the first and 99th percentiles. Effective sample size was calculated to assess positivity and weight stability. Weighted model performance was treated as a sensitivity analysis rather than a corrected primary estimate when effective sample size was severely reduced [19].
 
@@ -90,19 +90,17 @@ Permutation importance measured the decrease in cross-validated AUROC after shuf
 
 External discrimination and calibration were summarized by eICU hospital. Hospitals with both outcome classes contributed point estimates. Bootstrap AUROC confidence intervals required at least five events and 20 non-events. Within-hospital calibration estimates required at least 10 events and 10 non-events. These thresholds were set to avoid presenting numerically unstable site estimates.
 
-### Exploratory Trajectory Analysis
-
-As a secondary analysis, MIMIC-IV daily delirium status during ICU days 2-5 was analyzed with latent class mixed models using a threshold link, quadratic time, and a random intercept. One- through four-class solutions were attempted with 30 random starts. Model choice considered convergence, Bayesian information criterion, minimum class size of 5%, posterior classification, and entropy. Reporting followed the Guidelines for Reporting on Latent Trajectory Studies (GRoLTS) [20]. The frozen MIMIC-IV trajectory model was applied to eICU-CRD without independent reclustering, but trajectory results were designated exploratory when classification quality was weak.
-
 ### Sensitivity Analyses
 
-Sensitivity analyses removed first-24-hour antipsychotic exposure, added missingness indicators, expanded to less transportable variables with indicators, applied inverse-probability weighting, and treated unobserved post-baseline assessments as negative in a broad eICU cohort. Two post-hoc coding-harmonization analyses separately removed psychiatric disorder and ICU type, repeated the full patient-grouped nested validation procedure, and compared external AUROC with the primary enhanced model using 1,000 patient-clustered bootstrap samples. A simplified bedside score was evaluated but prespecified as non-deployable if external discrimination or calibration deteriorated materially.
+Sensitivity analyses removed first-24-hour antipsychotic exposure, added missingness indicators, expanded to less transportable variables with indicators, applied inverse-probability weighting, and treated unobserved post-baseline assessments as negative in a broad eICU cohort. Three post-hoc coding-harmonization analyses separately removed psychiatric disorder, ICU type, and race, repeated the full patient-grouped nested validation procedure, and compared external AUROC with the primary enhanced model using 1,000 hospital-hierarchical bootstrap samples. The models were also retrained for two alternative endpoints: persistent delirium requiring at least two positive observed days and any post-24-hour delirium. Full-feature L2-regularized logistic regression models were evaluated using the same clinical and enhanced feature sets. Performance was summarized by sex, age group, and harmonized race category when each subgroup contained at least 20 events and 20 non-events. A simplified bedside score was evaluated but prespecified as non-deployable if external discrimination or calibration deteriorated materially.
+
+As a supplementary exploratory analysis, MIMIC-IV daily delirium status during ICU days 2-5 was analyzed with latent class mixed models using a threshold link, quadratic time, and a random intercept. One- through four-class solutions were attempted with 30 random starts and reported according to GRoLTS [20]. Because classification quality was weak, trajectory assignments were not used as the primary prediction target or as evidence of stable clinical phenotypes.
 
 ### Software, Reporting, and Ethics
 
 Data were processed in PostgreSQL {{POSTGRES_VERSION}}. Prediction analyses used Python {{PYTHON_VERSION}}, pandas {{PANDAS_VERSION}}, scikit-learn {{SKLEARN_VERSION}}, XGBoost {{XGBOOST_VERSION}}, and SHAP {{SHAP_VERSION}}. Trajectory models used R {{R_VERSION}} and lcmm {{LCMM_VERSION}}. A fixed random seed (20260726) was used. Reporting was structured according to TRIPOD+AI, with PROBAST+AI domains considered during design and interpretation [21,22].
 
-Ethical approval was not required because this retrospective study used deidentified research databases available to credentialed users. MIMIC-IV and eICU-CRD were accessed and analyzed through PhysioNet after completion of the required training and under their respective data-use agreements. No identifiable data were accessed.
+MIMIC-IV was reviewed by the Beth Israel Deaconess Medical Center Institutional Review Board, which granted a waiver of informed consent for the deidentified resource. eICU-CRD was released after Health Insurance Portability and Accountability Act safe-harbor deidentification. This secondary analysis used only deidentified data accessed by credentialed users under PhysioNet data-use agreements; no identifiable data were accessed. Under these conditions, no additional participant consent was required for this analysis.
 
 ### Protocol Amendments
 
@@ -126,9 +124,11 @@ The clinical baseline model achieved a MIMIC-IV out-of-fold AUROC of {{CLIN_INT_
 
 Adding the eight nursing assessment and treatment variables increased MIMIC-IV AUROC to {{ENH_INT_AUROC_CI}} and external AUROC to {{ENH_EXT_AUROC_CI}}. The paired difference was {{DELTA_MIMIC_FULL}} internally and {{DELTA_EICU_FULL}} externally. External AUPRC was {{ENH_EXT_AUPRC_CI}}, compared with an event prevalence of {{EICU_RATE}}%. At the MIMIC-derived threshold of {{ENH_THRESHOLD}}, external sensitivity was {{ENH_EXT_SENSITIVITY}}, specificity {{ENH_EXT_SPECIFICITY}}, positive predictive value {{ENH_EXT_PPV}}, and negative predictive value {{ENH_EXT_NPV}}.
 
-Calibration was near acceptable internally but deteriorated externally. For the enhanced model, the external calibration intercept was {{ENH_EXT_CAL_INTERCEPT}} and slope {{ENH_EXT_CAL_SLOPE}}, with an expected calibration error of {{ENH_EXT_ECE}}. The negative intercept indicated systematic overprediction in eICU-CRD, and a slope below 1 indicated predictions that were too extreme. Full performance estimates are shown in Table 2.
+Calibration was near acceptable internally but deteriorated externally. For the enhanced model, the external calibration intercept was {{ENH_EXT_CAL_INTERCEPT_CI}}, slope {{ENH_EXT_CAL_SLOPE_CI}}, and expected calibration error {{ENH_EXT_ECE_CI}}. The negative intercept indicated systematic overprediction in eICU-CRD, and a slope below 1 indicated predictions that were too extreme. Apparent intercept-only recalibration reduced the external Brier score to {{RECAL_INTERCEPT_BRIER}}, while intercept-plus-slope recalibration reduced it to {{RECAL_FULL_BRIER}} and expected calibration error to {{RECAL_FULL_ECE}}; these in-sample diagnostics require independent confirmation (Figure 3).
 
 [[TABLE2]]
+
+[[FIGURE3]]
 
 ### Explainability and Incremental Variables
 
@@ -140,43 +140,45 @@ Among the eight incremental variables, minimum GCS had the largest mean absolute
 
 ### Assessment Selection and Positivity
 
-The strict cohort represented {{MIMIC_SELECTION_RATE}}% of MIMIC-IV candidates and only {{EICU_SELECTION_RATE}}% of eICU candidates. In eICU-CRD, a patient-feature-only selection model achieved AUROC {{EICU_PATIENT_ONLY_AUC}}, whereas hospital identity alone achieved {{EICU_HOSPITAL_ONLY_AUC}} and the combined model achieved {{EICU_COMBINED_SELECTION_AUC}} (Table 3). Permuting hospital identity reduced AUROC by a mean of {{HOSPITAL_PERMUTATION_DROP}}; no individual patient feature reduced AUROC by more than {{MAX_PATIENT_PERMUTATION_DROP}} (Figure 3).
+The strict cohort represented {{MIMIC_SELECTION_RATE}}% of MIMIC-IV candidates and only {{EICU_SELECTION_RATE}}% of eICU candidates. In eICU-CRD, a patient-feature-only selection model achieved AUROC {{EICU_PATIENT_ONLY_AUC}}. Measured hospital teaching status, bed-number category, and region alone achieved {{EICU_HOSPITAL_ATTRIBUTES_AUC}}, and their combination with patient features achieved {{EICU_PATIENT_ATTRIBUTES_AUC}}. Hospital identity alone achieved {{EICU_HOSPITAL_ONLY_AUC}} and the combined patient-feature plus hospital-identity model achieved {{EICU_COMBINED_SELECTION_AUC}} (Table 3). Permuting hospital identity reduced AUROC by a mean of {{HOSPITAL_PERMUTATION_DROP}}; no individual patient feature reduced AUROC by more than {{MAX_PATIENT_PERMUTATION_DROP}} (Figure 4).
 
 The effective sample size after inverse-probability weighting was {{MIMIC_IPW_ESS}} for MIMIC-IV but only {{EICU_IPW_ESS}} for eICU-CRD. The IPW external AUROC was {{EICU_IPW_AUC}}, but the severe reduction from {{EICU_N}} observed stays to an effective sample of approximately {{EICU_IPW_ESS_ROUNDED}} indicated poor positivity. The weighted result was therefore not interpreted as a recovered population-level validation estimate.
 
 [[TABLE3]]
 
-[[FIGURE3]]
+[[FIGURE4]]
 
 ### Hospital-Level Heterogeneity
 
-Of {{CANDIDATE_HOSPITALS}} eICU hospitals represented in the candidate cohort, {{STRICT_HOSPITALS}} contributed at least one strict-cohort patient and {{BOTH_CLASS_HOSPITALS}} had both outcome classes. Only {{FOREST_HOSPITALS}} hospitals met the event and non-event threshold for bootstrap AUROC confidence intervals; these hospitals covered {{FOREST_PATIENT_SHARE}}% of strict-cohort patients and {{FOREST_EVENT_SHARE}}% of events (Figure 4). Within-hospital calibration could be estimated in only {{CALIBRATION_HOSPITALS}} hospitals. Thus, site-specific discrimination was evaluable for most patients but only a minority of candidate hospitals, and site-specific calibration evidence was narrower still.
+Of {{CANDIDATE_HOSPITALS}} eICU hospitals represented in the candidate cohort, {{STRICT_HOSPITALS}} contributed at least one strict-cohort patient and {{BOTH_CLASS_HOSPITALS}} had both outcome classes. Only {{FOREST_HOSPITALS}} hospitals met the event and non-event threshold for bootstrap AUROC confidence intervals; these hospitals covered {{FOREST_PATIENT_SHARE}}% of strict-cohort patients and {{FOREST_EVENT_SHARE}}% of events (Figure 5). Within-hospital calibration could be estimated in only {{CALIBRATION_HOSPITALS}} hospitals. Thus, site-specific discrimination was evaluable for most patients but only a minority of candidate hospitals, and site-specific calibration evidence was narrower still.
 
-[[FIGURE4]]
+[[FIGURE5]]
 
 ### Sensitivity and Exploratory Analyses
 
 Removing antipsychotic exposure yielded an external AUROC of {{NO_ANTIPSYCHOTIC_AUC_CI}} and AUPRC of {{NO_ANTIPSYCHOTIC_AUPRC_CI}}, closely matching the primary enhanced model. Adding missingness indicators produced external AUROC {{MISSING_INDICATOR_AUC_CI}}; expanding to the full indicator model produced {{FULL_INDICATOR_AUC_CI}}. These findings did not support using documentation missingness as a primary predictive signal.
 
-Psychiatric disorder was recorded in {{PSYCHIATRIC_MIMIC_RATE}}% of MIMIC-IV stays and {{PSYCHIATRIC_EICU_RATE}}% of eICU stays (standardized mean difference {{PSYCHIATRIC_SMD}}). Omitting it yielded external AUROC {{NO_PSYCHIATRIC_AUC_CI}}, a paired change of {{NO_PSYCHIATRIC_DELTA_FULL}} relative to the primary enhanced model. The external Brier score was {{NO_PSYCHIATRIC_BRIER}}, calibration intercept {{NO_PSYCHIATRIC_CAL_INTERCEPT}}, and calibration slope {{NO_PSYCHIATRIC_CAL_SLOPE}}. The mixed-or-other ICU category comprised {{MIMIC_MIXED_ICU}} MIMIC-IV stays and {{EICU_MIXED_ICU}} eICU stays. Omitting ICU type yielded external AUROC {{NO_ICU_TYPE_AUC_CI}}, a paired change of {{NO_ICU_TYPE_DELTA_FULL}}, Brier score {{NO_ICU_TYPE_BRIER}}, calibration intercept {{NO_ICU_TYPE_CAL_INTERCEPT}}, and calibration slope {{NO_ICU_TYPE_CAL_SLOPE}}. These post-hoc analyses indicated modest coding-harmonization sensitivity but did not replace the prespecified primary model (Supplementary Table S2).
+Psychiatric disorder was recorded in {{PSYCHIATRIC_MIMIC_RATE}}% of MIMIC-IV stays and {{PSYCHIATRIC_EICU_RATE}}% of eICU stays (standardized mean difference {{PSYCHIATRIC_SMD}}). Omitting it yielded external AUROC {{NO_PSYCHIATRIC_AUC_CI}}, a paired change of {{NO_PSYCHIATRIC_DELTA_FULL}} relative to the primary enhanced model. The external Brier score was {{NO_PSYCHIATRIC_BRIER}}, calibration intercept {{NO_PSYCHIATRIC_CAL_INTERCEPT}}, and calibration slope {{NO_PSYCHIATRIC_CAL_SLOPE}}. The mixed-or-other ICU category comprised {{MIMIC_MIXED_ICU}} MIMIC-IV stays and {{EICU_MIXED_ICU}} eICU stays. Omitting ICU type yielded external AUROC {{NO_ICU_TYPE_AUC_CI}}, a paired change of {{NO_ICU_TYPE_DELTA_FULL}}, Brier score {{NO_ICU_TYPE_BRIER}}, calibration intercept {{NO_ICU_TYPE_CAL_INTERCEPT}}, and calibration slope {{NO_ICU_TYPE_CAL_SLOPE}}. Omitting race yielded external AUROC {{NO_RACE_AUC_CI}}, with a paired change of {{NO_RACE_DELTA_FULL}}. These post-hoc analyses indicated coding-harmonization sensitivity but did not replace the prespecified primary model (Supplementary Table S2).
+
+The full-feature enhanced regularized logistic model achieved external AUROC {{LOGISTIC_ENHANCED_EXT_AUC_CI}}, compared with {{LOGISTIC_CLINICAL_EXT_AUC_CI}} for the corresponding clinical-feature model. The stricter endpoint requiring at least two positive observed days identified {{STRICT_MIMIC_EVENTS}} MIMIC-IV and {{STRICT_EICU_EVENTS}} eICU events; the enhanced XGBoost model achieved external AUROC {{STRICT_ENDPOINT_EXT_AUC_CI}}. The broader any-post-24-hour endpoint identified {{ANY_MIMIC_EVENTS}} and {{ANY_EICU_EVENTS}} events, respectively, with external AUROC {{ANY_ENDPOINT_EXT_AUC_CI}}. These benchmarks distinguish the contribution of the feature set from algorithm complexity and show how performance varies with the operational outcome definition (Supplementary Table S3). Subgroup estimates by sex, age, and race are reported descriptively in Supplementary Table S4.
 
 When unobserved follow-up was treated as absence of delirium, the broad eICU cohort contained 56,394 stays but had an event rate of only 0.84%. AUROC was {{BROAD_AUC}}, while AUPRC fell to {{BROAD_AUPRC}} and the calibration intercept to {{BROAD_CAL_INTERCEPT}}. This analysis demonstrated how treating unmeasured outcomes as negatives changes the estimand and creates substantial outcome misclassification [23].
 
 The simplified bedside score had external AUROC {{BEDSIDE_AUC}}, Brier score {{BEDSIDE_BRIER}}, and calibration slope {{BEDSIDE_SLOPE}}. It was therefore retained only as a negative translational experiment and not proposed for clinical use.
 
-The two-class trajectory solution had the lowest BIC among converged solutions meeting minimum class-size criteria, but entropy was only {{TRAJECTORY_ENTROPY}}. The higher-risk class contained {{TRAJECTORY_HIGH_N}} MIMIC-IV stays ({{TRAJECTORY_HIGH_RATE}}%), while the four-class model did not converge. Frozen external trajectory discrimination was {{TRAJECTORY_EXT_AUC}}. These findings did not support stable three- or four-trajectory phenotypes and were treated as exploratory (Supplementary Figure S1).
+The supplementary two-class trajectory solution had entropy {{TRAJECTORY_ENTROPY}}, and the four-class model did not converge. These findings did not support stable three- or four-trajectory phenotypes (Supplementary Figure S1).
 
 ## Discussion
 
 ### Principal Findings
 
-This study produced four main findings. First, a harmonized first-24-hour model for operationally defined late or persistent delirium showed moderate internal discrimination and more limited, though non-random, external transportability. Second, adding three consciousness or sedation assessments and five treatment exposures improved discrimination in both databases, with a larger paired AUROC gain in eICU-CRD. Third, external calibration remained inadequate for bedside deployment. Fourth, and most importantly, entry into the eICU strict assessment cohort was determined predominantly by hospital identity: hospital alone predicted inclusion with AUROC {{EICU_HOSPITAL_ONLY_AUC}}, and shuffling hospital identity decreased AUROC by {{HOSPITAL_PERMUTATION_DROP}}. The external validation cohort therefore represents hospitals with compatible delirium assessment practices, not the full eICU population.
+This study produced four main findings. First, a harmonized first-24-hour model for operationally defined late or persistent delirium showed moderate internal discrimination and more limited external transportability. Second, adding three consciousness or sedation assessments and five treatment exposures improved discrimination in both databases, with a larger paired AUROC gain in eICU-CRD. Third, external calibration remained inadequate for bedside deployment. Fourth, entry into the eICU strict assessment cohort was strongly associated with hospital identity: hospital alone predicted inclusion with AUROC {{EICU_HOSPITAL_ONLY_AUC}}, and shuffling hospital identity decreased AUROC by {{HOSPITAL_PERMUTATION_DROP}}. This finding constrains the external validation to patients treated at hospitals with compatible delirium-assessment documentation and does not by itself establish why predictive performance changed.
 
 ### Relation to Existing Prediction Models
 
 PRE-DELIRIC and E-PRE-DELIRIC established that delirium risk can be estimated from early ICU information [7,8]. More recent machine-learning models have reported higher AUROCs, including models using detailed time-series data and broader delirium endpoints [10]. Direct numerical comparison is inappropriate because our cohort was restricted to older adults who were documented negative during the first 24 hours, our endpoint emphasized late or persistent patterns during days 2-5, and our external model was transferred across databases without recalibration. These choices make the task harder but align the prediction with an actionable landmark.
 
-Our results are consistent with broader evidence that externally validated ICU artificial intelligence models often lose performance outside their development setting [11]. The external AUROC of {{ENH_EXT_AUROC_POINT}} should therefore not be reframed as a high-performing deployable tool. The more informative result is the decomposition of why apparent transportability is limited: case-mix differences, feature-definition differences, calibration drift, and especially institution-specific outcome observation.
+Our results are consistent with broader evidence that externally validated ICU artificial intelligence models often lose performance outside their development setting [11]. The external AUROC of {{ENH_EXT_AUROC_POINT}} should therefore not be reframed as a high-performing deployable tool. The more informative result is the characterization of factors that coincided with limited apparent transportability: case-mix differences, feature-definition differences, calibration drift, and institution-specific outcome observation.
 
 ### Value of Nursing Assessments and Treatment Exposures
 
@@ -184,17 +186,19 @@ The enhanced model improved AUROC by {{DELTA_MIMIC}} internally and {{DELTA_EICU
 
 The result supports structured, timely bedside assessment as useful predictive information, but it does not establish that changing any attributed variable would change delirium risk. Antipsychotic exposure is particularly susceptible to reverse interpretation because it may be an early response to behavioral symptoms. Its removal did not materially reduce external performance, which reduces concern that the primary result depended on this potentially treatment-responsive marker.
 
+Subgroup results did not support claims of uniform performance. External AUROC was similar by sex but was lower among patients aged 85 years or older than in the two younger age groups. Only White and Black race categories met the minimum event threshold in eICU-CRD, so the absence of estimates for smaller groups reflects inadequate precision rather than evidence of equivalence. These analyses are descriptive fairness checks and require confirmation in data with broader and more consistently recorded demographic representation.
+
 ### Coding Harmonization and Predictor Transportability
 
 Two high-ranking overall predictors also showed marked cross-database category differences. Psychiatric disorder had the largest standardized mean difference among primary binary features ({{PSYCHIATRIC_SMD}}), with prevalence of {{PSYCHIATRIC_MIMIC_RATE}}% in MIMIC-IV and {{PSYCHIATRIC_EICU_RATE}}% in eICU-CRD. Mixed-or-other ICU type accounted for {{MIMIC_MIXED_ICU}} MIMIC-IV stays but {{EICU_MIXED_ICU}} eICU stays, consistent with different unit-label granularity. Because psychiatric disorder and cardiac ICU type were among the leading overall SHAP features, these discrepancies represented plausible sources of predictor-effect mismatch.
 
-The omission analyses supported this interpretation without showing that either variable alone explained the transportability gap. Removing psychiatric disorder reduced internal AUROC from 0.730 to 0.720 but increased external AUROC by 0.005; the paired confidence interval excluded zero, although the external Brier score worsened slightly. Removing ICU type reduced internal AUROC to 0.718 and increased external AUROC by 0.007, but its paired confidence interval included zero; external calibration and Brier score improved modestly. Thus, internally useful coding signals did not transfer perfectly, but no single omission resolved external calibration. The prespecified model was retained, and these post-hoc results are evidence for harmonization fragility rather than a basis for model selection.
+The omission analyses supported this interpretation without showing that one coding domain alone explained the transportability gap. Removing psychiatric disorder, ICU type, or race changed external AUROC by {{NO_PSYCHIATRIC_DELTA_FULL}}, {{NO_ICU_TYPE_DELTA_FULL}}, and {{NO_RACE_DELTA_FULL}}, respectively. Thus, internally useful coding signals did not transfer perfectly, but no single omission resolved external calibration. The prespecified model was retained, and these post-hoc results are evidence for harmonization fragility rather than a basis for model selection.
 
 ### Assessment Practice as a Transportability Mechanism
 
 The assessment-selection analysis is the study's central methodological contribution. Only {{EICU_SELECTION_RATE}}% of eligible eICU candidates had the baseline-negative and longitudinal CAM-ICU pattern required for reliable labeling. Patient features predicted selection moderately, but hospital identity predicted it extremely well. This result is consistent with implementation studies showing that delirium assessment frequency depends on training, workflow integration, and local barriers [24,25]. In one structured implementation, CAM-ICU assessment increased from 38% to 95% per nursing shift after training and workflow changes [24].
 
-The combined selection model used patient-grouped cross-validation intentionally. A leave-one-hospital-out design would answer whether assessment behavior can be predicted in a new hospital; our question was whether known hospital policy explained who entered the observed cohort. The very high AUROC and large hospital permutation effect quantify institutional measurement policy, not biological risk.
+The combined selection model used patient-grouped cross-validation intentionally. A leave-one-hospital-out design would answer whether assessment behavior can be predicted in a new hospital; our descriptive question was how strongly known hospital membership was associated with entry into the observed cohort. The very high AUROC and large hospital permutation effect quantify institutional measurement patterns, not biological risk or a causal effect of hospital policy.
 
 The IPW sensitivity result should also be interpreted cautiously. A nominal improvement in weighted external AUROC does not overcome an effective sample size of only {{EICU_IPW_ESS_ROUNDED}}. The weight instability indicates limited overlap: some hospitals or patient strata had near-zero probability of meeting the strict assessment definition. Under this positivity problem, statistical weighting cannot create outcome information that was never recorded.
 
@@ -206,25 +210,23 @@ Hospital-level analyses further narrowed the scope of inference. The AUROC fores
 
 The simplified bedside score lost too much external performance and calibration to support deployment. We therefore do not present it as a clinical tool. A more responsible translation pathway would include local outcome-audit infrastructure, recalibration, prospective silent evaluation, and assessment of whether alerts improve delivery of preventive bundles without increasing burdensome monitoring or inappropriate medication use.
 
-### Exploratory Trajectories
-
-The data did not support the initially anticipated three or four clinically stable trajectory classes. Although a two-class model had the best BIC among acceptable fits, entropy was {{TRAJECTORY_ENTROPY}}, and the four-class solution failed to converge. Low entropy means that individual class assignments were uncertain. The trajectory result is therefore hypothesis-generating and should not serve as the primary prediction target or external-validation claim. This restraint is important because apparently distinct longitudinal patterns can be created by irregular observation, discharge, death, and changing assessment frequency.
+Any future implementation would also require automated checks for units, physiologic ranges, completeness of the first-24-hour window, and compatibility of local category mappings before a probability is displayed. Missing values would need to be processed with development-derived imputations only after verifying that local missingness patterns are comparable. ICU nurses and clinicians would require training to interpret the output as a screening estimate rather than a diagnosis or treatment directive. Because these implementation conditions have not been prospectively tested, the present model should remain a research model.
 
 ### Strengths and Limitations
 
 Strengths include a strict temporal landmark, an identical executable endpoint across databases, patient-grouped nested internal validation, external evaluation without refitting, paired assessment of incremental variables, SHAP analysis separated into overall and incremental contributions, and explicit quantification of assessment selection and hospital heterogeneity. Data-quality audits identified and corrected a race-category substring error, a negative urine-output sentinel, invalid GCS values, and temperature-source discrepancies before final result generation. The code and analysis manifests were retained for reproducibility.
 
-Several limitations remain. First, delirium labels came from routine documentation rather than research-standard adjudication. Even in the strict cohort, CAM-ICU sensitivity depends on training, sedation state, and assessment frequency. Second, the strict design improves confidence in observed negatives but induces strong selection, especially in eICU-CRD. Third, the databases represent US practice from different periods and EHR systems. Psychiatric disorder prevalence differed from {{PSYCHIATRIC_MIMIC_RATE}}% to {{PSYCHIATRIC_EICU_RATE}}% (standardized mean difference {{PSYCHIATRIC_SMD}}), and mixed-or-other ICU labels differed from {{MIMIC_MIXED_ICU}} to {{EICU_MIXED_ICU}}; alcohol use and medication coding also were not identical. Post-hoc omission analyses quantified but could not eliminate this harmonization risk. Fourth, median imputation and a 40% missingness threshold are pragmatic choices, not a substitute for standardized collection. Fifth, the operational late or persistent endpoint has face validity but is not a universally established clinical phenotype. Sixth, the hospital forest plot and calibration analysis covered only selected sites, and hospital identities in eICU are anonymized, limiting explanation by teaching status or local protocol. Seventh, this retrospective analysis did not test clinical impact, fairness across protected groups, alert fatigue, or changes in care.
+Several limitations remain. First, delirium labels came from routine documentation rather than research-standard adjudication. Even in the strict cohort, CAM-ICU sensitivity depends on training, sedation state, and assessment frequency. Second, the strict design improves confidence in observed negatives but induces strong selection, especially in eICU-CRD. Third, the databases represent US practice from different periods and EHR systems. Psychiatric disorder prevalence differed from {{PSYCHIATRIC_MIMIC_RATE}}% to {{PSYCHIATRIC_EICU_RATE}}% (standardized mean difference {{PSYCHIATRIC_SMD}}), and mixed-or-other ICU labels differed from {{MIMIC_MIXED_ICU}} to {{EICU_MIXED_ICU}}; alcohol use and medication coding also were not identical. Post-hoc omission analyses quantified but could not eliminate this harmonization risk. Fourth, median imputation and a 40% missingness threshold are pragmatic choices, not a substitute for standardized collection. Fifth, the operational late or persistent endpoint has face validity but is not a universally established clinical phenotype; alternative-endpoint analyses reduce but cannot remove this concern. Sixth, the hospital forest plot and calibration analysis covered only selected sites. eICU provides teaching status, bed-number category, and region, which we analyzed, but anonymization and absence of local protocol data still prevented direct attribution of assessment differences to specific implementation practices. Seventh, subgroup analyses were descriptive and limited by low event counts, and this retrospective study did not test clinical impact, alert fatigue, or changes in care.
 
 ## Conclusions
 
-An interpretable first-24-hour model incorporating early GCS, RASS, and treatment exposures improved prediction of late or persistent delirium in older ICU patients across MIMIC-IV and eICU-CRD, but external calibration and hospital-level heterogeneity preclude bedside deployment. The dominant transportability constraint was not patient physiology alone: hospital identity almost completely determined whether sufficiently structured delirium assessments were available. Future delirium prediction research should treat outcome-surveillance practice as part of the target setting, report site-level assessment coverage, and validate models only where the outcome can be measured consistently.
+An explainable first-24-hour model incorporating early GCS, RASS, and treatment exposures improved prediction of late or persistent delirium in serially assessed older ICU patients, but external calibration and hospital-level heterogeneity preclude bedside deployment. Hospital identity strongly predicted whether sufficiently structured delirium assessments were available, constraining cohort representativeness and the scope of transportability claims. Future delirium prediction research should treat outcome-surveillance practice as part of the target setting, report site-level assessment coverage, and validate models only where the outcome can be measured consistently.
 
 ## Declarations
 
 ### Ethics Approval
 
-Ethical approval was not required because this retrospective study used deidentified research databases available to credentialed users. MIMIC-IV and eICU-CRD were accessed and analyzed through PhysioNet after completion of the required training and under their respective data-use agreements. No identifiable data were accessed.
+MIMIC-IV was reviewed by the Beth Israel Deaconess Medical Center Institutional Review Board, which granted a waiver of informed consent for the deidentified resource. eICU-CRD was released after Health Insurance Portability and Accountability Act safe-harbor deidentification. This secondary analysis used only deidentified data accessed by credentialed users under PhysioNet data-use agreements; no identifiable data were accessed and no additional participant consent was required.
 
 ### Consent for Publication
 
@@ -234,9 +236,13 @@ Not applicable.
 
 MIMIC-IV version 3.1 and eICU-CRD version 2.0 are available to credentialed users through PhysioNet after completion of required training and data-use agreements. The data cannot be redistributed by the authors.
 
+### Protocol and Registration
+
+The study was not prospectively registered and no separate public protocol was prepared. Protocol amendments and the transition from the exploratory trajectory target to the harmonized rule-based primary endpoint are reported in the Methods and retained in the version-controlled repository.
+
 ### Code Availability
 
-SQL extraction, quality-assurance queries, model-development scripts, and manuscript-generation code are available at https://github.com/renjingzhuo-maker/older-icu-delirium-transportability. The exact software version used for this study is archived as version 1.0.0 at Zenodo (https://doi.org/10.5281/zenodo.21613443).
+SQL extraction, quality-assurance queries, model-development scripts, and manuscript-generation code are available at https://github.com/renjingzhuo-maker/older-icu-delirium-transportability. The exact software version used for this study is archived as version 1.1.0 at Zenodo ({{ZENODO_VERSION_URL}}). Fitted model objects and patient-level predictions are not redistributed because they were derived from credentialed PhysioNet data; credentialed users can reproduce them locally with the released code.
 
 ### Funding
 
@@ -290,9 +296,11 @@ Patients and the public were not involved in the design, conduct, reporting, or 
 
 **Figure 2. SHAP summary for the nursing-assessment and treatment-enhanced model.** Each point represents one observation and one transformed model feature. Horizontal position is the SHAP contribution to the predicted log odds; color indicates the feature value where applicable. Importance reflects model attribution, not causality.
 
-**Figure 3. Mechanism of selection into the eICU strict assessment cohort.** Cross-validated selection models separate patient-feature and hospital-identity contributions. Patient-grouped validation was used to quantify known hospital policies; it was not intended to estimate performance in unseen hospitals.
+**Figure 3. Calibration of the nursing-assessment and treatment-enhanced model.** Quantile-grouped observed event proportions are plotted against mean predicted probabilities for MIMIC-IV out-of-fold predictions and frozen eICU-CRD predictions. The diagonal denotes perfect calibration.
 
-**Figure 4. Hospital-level external AUROC for the enhanced model.** Hospitals are displayed when they contained at least five events and 20 non-events, permitting a 300-sample bootstrap confidence interval. The plot covers {{FOREST_HOSPITALS}} hospitals, {{FOREST_PATIENT_SHARE}}% of strict-cohort patients, and {{FOREST_EVENT_SHARE}}% of events.
+**Figure 4. Mechanism of selection into the eICU strict assessment cohort.** Cross-validated selection models compare patient features, measured hospital attributes, and hospital identity. Patient-grouped validation quantified associations within known hospitals; it was not intended to estimate performance in unseen hospitals or causal policy effects.
+
+**Figure 5. Hospital-level external AUROC for the enhanced model.** Sites are anonymized and displayed when they contained at least five events and 20 non-events, permitting a 300-sample bootstrap confidence interval. The plot covers {{FOREST_HOSPITALS}} hospitals, {{FOREST_PATIENT_SHARE}}% of strict-cohort patients, and {{FOREST_EVENT_SHARE}}% of events.
 
 [[PAGE_BREAK]]
 
@@ -314,11 +322,23 @@ Supplementary Table S1 reports feature-level missingness in both strict cohorts,
 
 ### Supplementary Coding-Harmonization Sensitivity Analysis
 
-Psychiatric disorder and ICU type were omitted in separate post-hoc models because both were prominent overall SHAP features and showed marked cross-database distribution differences. Each model repeated the primary nested patient-grouped tuning and validation workflow. External confidence intervals used 500 patient-clustered bootstrap samples; paired AUROC differences versus the primary enhanced model used 1,000 patient-clustered bootstrap samples. These analyses were diagnostic and did not alter the prespecified primary feature set.
+Psychiatric disorder, ICU type, and race were omitted in separate post-hoc models because of coding or category-harmonization concerns. Each model repeated the primary nested patient-grouped tuning and validation workflow. External confidence intervals used 500 two-stage hospital-and-patient bootstrap samples; paired AUROC differences versus the primary enhanced model used 1,000 hierarchical bootstrap samples. These analyses were diagnostic and did not alter the prespecified primary feature set.
 
 ### Supplementary Table S2
 
 [[TABLES2]]
+
+### Supplementary Table S3
+
+Alternative endpoints and full-feature L2-regularized logistic regression benchmarks are reported below.
+
+[[TABLES3]]
+
+### Supplementary Table S4
+
+Subgroup estimates were withheld when a stratum contained fewer than 20 events or 20 non-events.
+
+[[TABLES4]]
 
 ### Supplementary Figure S1
 

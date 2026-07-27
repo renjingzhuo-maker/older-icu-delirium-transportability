@@ -2,7 +2,7 @@
 
 ## Objective
 
-Develop an interpretable early prediction model for late or persistent delirium
+Develop an explainable early prediction model for late or persistent delirium
 in older ICU patients using MIMIC-IV and evaluate transportability in eICU-CRD.
 Latent trajectory discovery and bedside-score distillation are exploratory
 secondary analyses.
@@ -27,8 +27,8 @@ secondary analyses.
 - The primary cohort uses CAM-ICU only. ICDSC is reserved for sensitivity
   analysis because it is a different measurement instrument.
 - eICU hospital is retained for center-level sensitivity analyses.
-- Confidence intervals use patient-cluster bootstrap resampling when a patient
-  has more than one eligible eICU hospitalization.
+- External confidence intervals use two-stage hospital-and-patient bootstrap
+  resampling to reflect multicenter clustering and within-hospital sampling.
 
 ## Time origin and boundaries
 
@@ -74,8 +74,9 @@ reference.
   SHAP predictors of the nursing-assessment and treatment-enhanced model.
 
 Patient-level grouped five-fold cross-validation is used in MIMIC. Hyperparameter
-tuning is confined to development data. The final frozen model is evaluated in
-eICU without refitting.
+tuning is confined to development data. Each inner search and the final
+development-cohort search use the same 20-configuration budget. The final frozen
+model is evaluated in eICU without refitting.
 
 Primary transportable models retain only features with no more than 40%
 missingness in either cohort and do not include missingness indicators.
@@ -101,7 +102,9 @@ care. The exact eight-feature incremental manifest is saved with results.
   least 5 events and 20 non-events; calibration is estimated where there are at
   least 10 events and 10 non-events.
 - Assessment-selection mechanism: compare patient-only, hospital-only, and
-  patient-plus-hospital models for adequate CAM-ICU outcome assessment.
+  patient-plus-hospital models for adequate CAM-ICU outcome assessment, with
+  parallel models using measured teaching status, bed-number category, and
+  region.
   Cross-validated raw-feature permutation importance quantifies the contribution
   of hospital identity versus patient characteristics.
   Folds are grouped by patient rather than held out by hospital because this
@@ -126,6 +129,14 @@ care. The exact eight-feature incremental manifest is saved with results.
   size precludes interpreting IPW estimates as corrected population performance.
 - Antipsychotic exposure is removed in a sensitivity model because it may
   represent treatment of early neuropsychiatric symptoms.
+- Psychiatric disorder, ICU type, and race are separately omitted in
+  coding-harmonization analyses.
+- Alternative outcomes require either at least two positive observed days or
+  any positive post-24-hour day.
+- Full-feature L2-regularized logistic models benchmark the contribution of
+  feature content against model complexity.
+- Performance is summarized by sex, age group, and harmonized race when a
+  subgroup contains at least 20 events and 20 non-events.
 - Sparse restraint and transfusion variables are excluded from predictive
   modeling if prevalence is clinically or statistically inadequate.
 - The bedside score is not presented as deployable unless external
@@ -148,8 +159,12 @@ On 2026-07-27, after the first cross-database results were reviewed:
   missingness in either database, without missingness indicators;
 - eICU nurse-charted C/F temperature recovery received a source, conversion,
   coverage, and sentinel-value audit; and
-- assessment-selection ablation and permutation analyses were added to explain
-  the severe external-cohort coverage restriction.
+- assessment-selection ablation and permutation analyses were added to
+  characterize the severe external-cohort coverage restriction;
+- hospital-level bootstrap resampling, calibration confidence intervals,
+  apparent recalibration diagnostics, measured hospital attributes, alternative
+  endpoints, regularized logistic benchmarks, and subgroup analyses were added
+  during manuscript review.
 
 These amendments and their rationale must be identified as data-quality and
 transportability analyses rather than described as fully prespecified.
