@@ -465,7 +465,7 @@ def build_context() -> dict[str, str]:
         "SHAP_VERSION": "0.50.0",
         "R_VERSION": "4.6.0",
         "LCMM_VERSION": "2.2.2",
-        "ZENODO_VERSION_URL": "https://doi.org/10.5281/zenodo.21613442",
+        "ZENODO_VERSION_URL": "https://doi.org/10.5281/zenodo.21615229",
     }
     return context
 

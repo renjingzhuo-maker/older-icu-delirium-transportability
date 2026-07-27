@@ -219,7 +219,7 @@ Citation metadata are provided in [`CITATION.cff`](CITATION.cff). The current
 release is version 1.1.0. Cite the exact software version used for an analysis:
 
 - Version 1.0.0: <https://doi.org/10.5281/zenodo.21613443>
-- Version 1.1.0: DOI pending release archival
+- Version 1.1.0: <https://doi.org/10.5281/zenodo.21615229>
 - All versions (concept DOI): <https://doi.org/10.5281/zenodo.21613442>
 
 The article DOI will be added after publication.
