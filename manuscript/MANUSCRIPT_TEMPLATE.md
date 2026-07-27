@@ -236,7 +236,7 @@ MIMIC-IV version 3.1 and eICU-CRD version 2.0 are available to credentialed user
 
 ### Code Availability
 
-SQL extraction, quality-assurance queries, model-development scripts, and manuscript-generation code are available at https://github.com/renjingzhuo-maker/older-icu-delirium-transportability. The archived software release DOI will be added after Zenodo deposition.
+SQL extraction, quality-assurance queries, model-development scripts, and manuscript-generation code are available at https://github.com/renjingzhuo-maker/older-icu-delirium-transportability. The exact software version used for this study is archived as version 1.0.0 at Zenodo (https://doi.org/10.5281/zenodo.21613443).
 
 ### Funding
 

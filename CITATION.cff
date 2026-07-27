@@ -4,6 +4,7 @@ title: "Older ICU Delirium Transportability"
 type: software
 version: 1.0.0
 date-released: 2026-07-27
+doi: 10.5281/zenodo.21613443
 license: MIT
 repository-code: "https://github.com/renjingzhuo-maker/older-icu-delirium-transportability"
 authors:

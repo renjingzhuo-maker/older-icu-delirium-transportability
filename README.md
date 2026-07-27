@@ -1,5 +1,7 @@
 # Older ICU Delirium Transportability
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21613442.svg)](https://doi.org/10.5281/zenodo.21613442)
+
 Reproducible code for:
 
 > Interpretable Machine Learning Prediction of Late or Persistent Delirium in
@@ -186,8 +188,13 @@ Aggregate results and interpretation limits are summarized in:
 
 ## Citation
 
-Citation metadata are provided in [`CITATION.cff`](CITATION.cff). Add the final
-article DOI and archived software DOI after publication and Zenodo release.
+Citation metadata are provided in [`CITATION.cff`](CITATION.cff). Cite the
+exact software version used for an analysis:
+
+- Version 1.0.0: <https://doi.org/10.5281/zenodo.21613443>
+- All versions (concept DOI): <https://doi.org/10.5281/zenodo.21613442>
+
+The article DOI will be added after publication.
 
 ## License
 
